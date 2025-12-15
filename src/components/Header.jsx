@@ -79,10 +79,10 @@ const Header = ({
               {showUserInfo && (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700 hidden sm:inline">
-                    Welcome, {user.full_name}
+                    Welcome, {user.name}
                   </span>
                   <span className="text-sm text-gray-700 sm:hidden">
-                    {user.full_name.split(' ')[0]}
+                    {user.name.split(' ')[0]}
                   </span>
                 </div>
               )}
