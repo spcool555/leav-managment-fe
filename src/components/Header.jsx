@@ -82,7 +82,7 @@ const Header = ({
                     Welcome, {user.name}
                   </span>
                   <span className="text-sm text-gray-700 sm:hidden">
-                    {user.name.split(' ')[0]}
+                    {user.name?.split(' ')[0] || user.name}
                   </span>
                 </div>
               )}
