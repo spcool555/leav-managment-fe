@@ -59,14 +59,14 @@ const AdminDashboard = () => {
     }
   };
 
-  // const fetchStats = async () => {
-  //   try {
-  //     const response = await api.get('/admin/stats');
-  //     setStats(response.data);
-  //   } catch (error) {
-  //     console.error('Failed to fetch stats:', error);
-  //   }
-  // };
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/admin/stats');
+      setStats(response.data);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
 
   const fetchAttendanceLogs = async () => {
     try {
@@ -83,14 +83,14 @@ const AdminDashboard = () => {
   };
 
   // should be pagenated.
-  // const fetchEmployees = async () => {
-  //   try {
-  //     const response = await api.get('/admin/employees');
-  //     setEmployees(response.data);
-  //   } catch (error) {
-  //     console.error('Failed to fetch employees:', error);
-  //   }
-  // };
+  const fetchEmployees = async () => {
+    try {
+      const response = await api.get('/admin/employees');
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    }
+  };
 
   const handleFilterChange = (e) => {
     setFilters({
