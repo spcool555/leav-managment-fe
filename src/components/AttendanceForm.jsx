@@ -12,6 +12,7 @@ const AttendanceForm = () => {
   const navigate = useNavigate();
   const webcamRef = useRef(null);
   
+  const [shiftType, setShiftType] = useState('');
   const [attendanceStatus, setAttendanceStatus] = useState(null);
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -75,6 +76,11 @@ const AttendanceForm = () => {
   };
 
   const submitAttendance = async () => {
+    if (!shiftType)
+            {   
+              alert('Please select your shift');         
+              return;
+            }
     if (!capturedImage) {
       toast.error('Please capture a photo');
       return;
@@ -94,6 +100,7 @@ const AttendanceForm = () => {
       
       const formData = new FormData();
       formData.append('employee_id', user.id);
+      formData.append('shift_type', shiftType);
       formData.append('location', location);
       formData.append('user_message', userMessage);
       formData.append('photo', blob, `${user.id}_${Date.now()}.jpg`);
@@ -134,6 +141,25 @@ const AttendanceForm = () => {
             <p className="text-gray-600">Employee ID: {user.id}</p>
             <p className="text-gray-600">Employee Name: {user.full_name}</p>
           </div>
+
+  {/* Shift Selection */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Select Your Current Shift *
+    </label>
+
+    <select
+    value={shiftType}
+    onChange={(e) => setShiftType(e.target.value)}
+    className="w-full border rounded px-3 py-2"
+    >
+      <option value="">-- Select Shift --</option>
+      <option value="general">General (9:30 AM – 6:00 PM)</option>
+      <option value="morning">Morning (7:00 AM – 2:00 PM)</option>
+      <option value="evening">Evening (2:00 PM – 10:00 PM)</option>
+      <option value="night">Night (10:00 PM – 7:00 AM)</option>
+    </select>
+  </div>
 
           {/* Photo Capture Section */}
           <div className="mb-6">
@@ -261,7 +287,7 @@ const AttendanceForm = () => {
               placeholder="Write your message (optional)"
             />
           </div>
-
+          
           {/* Submit Button */}
           <button
             onClick={submitAttendance}

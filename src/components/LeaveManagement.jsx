@@ -76,7 +76,7 @@ const LeaveManagement = () => {
     const colors = {
       sick: 'text-red-600 bg-red-50 border-red-200',
       casual: 'text-blue-600 bg-blue-50 border-blue-200',
-      annual: 'text-purple-600 bg-purple-50 border-purple-200'
+      Compensatory_off: 'text-purple-600 bg-purple-50 border-purple-200',
     };
     return colors[type] || 'text-gray-600 bg-gray-50 border-gray-200';
   };

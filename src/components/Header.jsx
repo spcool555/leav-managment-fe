@@ -1,29 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 import logoImage from '../assets/DECOFURN.png';
 
-const Header = ({ 
-  title, 
-  showBackButton = false, 
-  backPath = '/', 
+const Header = ({
+  title,
+  showBackButton = false,
+  backPath = '/',
   showLogout = true,
   showUserInfo = true,
   className = "bg-white shadow-sm border-b"
 }) => {
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleBack = () => {
-    navigate(backPath);
-  };
+  // ✅ STATES
+  const [language, setLanguage] = useState('en');
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+
+  // ✅ LOAD SAVED LANGUAGE
+  useEffect(() => {
+    if (user?.preferred_language) {
+      setLanguage(user.preferred_language);
+    }
+  }, [user]);
+
+  // ✅ HANDLERS
+  const handleBack = () => navigate(backPath);
 
   const handleLogoClick = () => {
-    if (user?.is_admin) {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
+    navigate(user?.is_admin ? '/admin' : '/dashboard');
+  };
+
+  const handleLanguageChange = async (lang) => {
+    setLanguage(lang);
+    setShowLangDropdown(false);
+
+    try {
+      await api.put('/user/language', {
+        employee_id: user.id,
+        language: lang
+      });
+      toast.success('Language updated');
+    } catch (error) {
+      toast.error('Failed to update language');
     }
   };
 
@@ -31,73 +55,86 @@ const Header = ({
     <header className={className}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
+
+          {/* LEFT SIDE */}
           <div className="flex items-center">
-            {/* Back Button */}
             {showBackButton && (
               <button
                 onClick={handleBack}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors mr-4"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 mr-4"
               >
                 <ArrowLeft className="h-5 w-5" />
                 <span className="hidden sm:inline">Back</span>
               </button>
             )}
-            
-            {/* Logo */}
-            <div 
-              className="flex items-center cursor-pointer group"
+
+            <div
+              className="flex items-center cursor-pointer"
               onClick={handleLogoClick}
             >
-              <div className="flex-shrink-0 mr-3">
-                <img 
-                  src={logoImage} 
-                  alt="Indraneel Logo" 
-                  className="h-8 w-8 md:h-10 md:w-10 object-contain transition-transform group-hover:scale-105"
-                />
-              </div>
-              
-              {/* Company Name & Title */}
-              <div className="flex flex-col sm:flex-row sm:items-center">
-                <h1 className="text-lg md:text-xl font-semibold text-gray-900">
-                  <span className="text-primary-600">DECOFURN</span>
-                  {title && (
-                    <>
-                      <span className="hidden sm:inline text-gray-400 mx-2">|</span>
-                      <span className="block sm:inline text-gray-700 text-base md:text-lg">
-                        {title}
-                      </span>
-                    </>
-                  )}
-                </h1>
-              </div>
+              <img src={logoImage} alt="Logo" className="h-8 w-8 mr-3" />
+              <h1 className="text-lg font-semibold text-gray-900">
+                <span className="text-primary-600">DECOFURN</span>
+                {title && <span className="ml-2 text-gray-600">{title}</span>}
+              </h1>
             </div>
           </div>
 
-          {/* Right Side - User Info & Logout */}
+          {/* RIGHT SIDE */}
           {(showUserInfo || showLogout) && user && (
-            <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="flex items-center space-x-3">
+
+              {/* ✅ SKY BLUE LANGUAGE BUTTON */}
+              <div className="relative hidden sm:block">
+                <button
+                  onClick={() => setShowLangDropdown(!showLangDropdown)}
+                  className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow"
+                >
+                  Language
+                </button>
+
+                {showLangDropdown && (
+                  <div className="absolute right-0 mt-2 w-24 bg-white border rounded-md shadow-md z-50">
+                    <button
+                      onClick={() => handleLanguageChange('en')}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                    >
+                      EN
+                    </button>
+                    <button
+                      onClick={() => handleLanguageChange('hi')}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                    >
+                      HI
+                    </button>
+                    <button
+                      onClick={() => handleLanguageChange('mr')}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                    >
+                      MR
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {showUserInfo && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700 hidden sm:inline">
-                    Welcome, {user.full_name}
-                  </span>
-                  <span className="text-sm text-gray-700 sm:hidden">
-                    {user.full_name.split(' ')[0]}
-                  </span>
-                </div>
+                <span className="text-sm text-gray-700">
+                  Welcome, {user.full_name}
+                </span>
               )}
-              
+
               {showLogout && (
                 <button
                   onClick={logout}
-                  className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700"
                 >
                   <LogOut className="h-5 w-5" />
-                  <span className="text-sm hidden sm:inline">Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               )}
             </div>
           )}
+
         </div>
       </div>
     </header>

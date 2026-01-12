@@ -10,7 +10,9 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
     email: '',
     phone: '',
     password: '',
-    is_admin: false
+    is_admin: false,
+    shift_type: 'general',
+    weekly_off: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -77,7 +79,9 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
       email: '',
       phone: '',
       password: '',
-      is_admin: false
+      is_admin: false,
+      shift_type: 'general',
+      weekly_off: ''
     });
     onClose();
   };
@@ -222,6 +226,7 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
               />
             </div>
           </div>
+
 
           {/* Admin Checkbox */}
           <div className="flex items-center">

@@ -6,6 +6,7 @@ import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AttendanceForm from './components/AttendanceForm';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Header from "./components/Header";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false, employeeOnly = false }) => {
@@ -136,5 +137,8 @@ function App() {
     </Router>
   );
 }
-
+    <>
+      <Header />
+      <EmployeeDashboard />
+    </>
 export default App;

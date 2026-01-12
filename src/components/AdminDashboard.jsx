@@ -176,11 +176,11 @@ const AdminDashboard = () => {
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize="12"
         fontWeight="bold"
@@ -450,6 +450,9 @@ const AdminDashboard = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Shift
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Message
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -458,8 +461,11 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {attendanceLogs.length > 0 ? (
-                  attendanceLogs.map((log) => (
+                      {attendanceLogs.length > 0 ? (
+                  attendanceLogs.map((log) =>{
+                    console.log("ATTENDANCE LOG",log);
+                    return(
+                    
                     <tr key={log.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
@@ -493,6 +499,9 @@ const AdminDashboard = () => {
                           {log.status?.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {log.shift_type || '-'}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                         {log.user_message || '-'}
                       </td>
@@ -524,12 +533,21 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                    })
                 ) : (
                   <tr>
                     <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
                       No attendance records found
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {log.shift_type ? log.shift_type.toUpperCase() : "-"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      {log.user_message || '-'}
+              </td>
                   </tr>
                 )}
               </tbody>
