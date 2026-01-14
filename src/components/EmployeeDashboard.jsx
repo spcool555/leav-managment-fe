@@ -186,13 +186,13 @@ const EmployeeDashboard = () => {
               {/* Leave Status */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <h3 className="font-medium text-gray-900 mb-2">Leave Balance</h3>
-               {leaveStats ? (
+{leaveStats ? (
   <div className="space-y-2">
     <div className="flex justify-between">
-      <span>Annual Leave:</span>
-      <span className="text-purple-600 font-medium">
-        {leaveStats?.annual_leave?.remaining ?? 0}/
-        {leaveStats?.annual_leave?.total ?? 0} days
+      <span>Sick Leave:</span>
+      <span className="text-red-600 font-medium">
+        {leaveStats?.sick_leave?.remaining ?? 0}/
+        {leaveStats?.sick_leave?.total ?? 0} days
       </span>
     </div>
 
@@ -205,10 +205,10 @@ const EmployeeDashboard = () => {
     </div>
 
     <div className="flex justify-between">
-      <span>Sick Leave:</span>
-      <span className="text-red-600 font-medium">
-        {leaveStats?.sick_leave?.remaining ?? 0}/
-        {leaveStats?.sick_leave?.total ?? 0} days
+      <span>Compensatory Leave:</span>
+      <span className="text-purple-600 font-medium">
+        {leaveStats?.Compensatory_leave?.remaining ?? 0}/
+        {leaveStats?.Compensatory_leave?.total ?? 0} days
       </span>
     </div>
 
@@ -222,6 +222,7 @@ const EmployeeDashboard = () => {
 ) : (
   <p className="text-gray-500">Loading stats...</p>
 )}
+
 
               </div>
 
