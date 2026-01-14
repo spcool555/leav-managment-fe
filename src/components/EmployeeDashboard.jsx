@@ -247,12 +247,16 @@ const EmployeeDashboard = () => {
               </div>
 
               <button
-                onClick={() => setShowLeaveModal(true)}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold flex items-center justify-center space-x-2 rounded-lg"
-              >
-                <FileText className="h-5 w-5" />
-                <span>Request Leave</span>
-              </button>
+  onClick={() => {
+    console.log("CLICKED");
+    setShowLeaveModal(true);
+  }}
+  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold flex items-center justify-center space-x-2 rounded-lg"
+>
+  <FileText className="h-5 w-5" />
+  <span>Request Leave</span>
+</button>
+
             </div>
           </div>
 
@@ -280,26 +284,39 @@ const EmployeeDashboard = () => {
               <div className="flex items-start space-x-3">
                 <Clock className="h-4 w-4 text-primary-600 mt-1" />
                 <p className="text-gray-600 text-sm">
-                  Office starts at 9:00 AM (15 min grace)
+                Attendance is calculated based on the assigned shift timings of the employee
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <p className="text-gray-600 text-sm">
+                Checking in after the allowed time will mark the attendance as Late
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <p className="text-gray-600 text-sm">
+                Checking in after the half-day cut-off time will result in Half Day(First Half Absent)
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <p className="text-gray-600 text-sm">
+                Checks out before minimum working hours will lead to Half Day(Second Half Absent)
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Leave History */}
-        <div className="mt-8">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <LeaveHistory
-              leaves={leaveHistory}
-              loading={leaveLoading}
-              onEditLeave={handleEditLeave}
-            />
-          </div>
-        </div>
+       
       </main>
 
       {/* Leave Request Modal */}
+      {showLeaveModal && (
       <LeaveRequestModal
         isOpen={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
@@ -307,8 +324,10 @@ const EmployeeDashboard = () => {
         employeeData={user}
         onLeaveSubmitted={handleLeaveSubmitted}
       />
+      )}
 
       {/* Edit Leave Modal */}
+      {showEditModal && (
       <EditLeaveModal
         isOpen={showEditModal}
         onClose={() => {
@@ -318,6 +337,7 @@ const EmployeeDashboard = () => {
         leave={selectedLeave}
         onLeaveUpdated={handleLeaveUpdated}
       />
+      )}
     </div>
   );
 };

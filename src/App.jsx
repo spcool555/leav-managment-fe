@@ -132,13 +132,13 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <>
-      <Header />
     <Router future={{ v7_relativeSplatPath: true }}>
       <AppRoutes />
     </Router>
-    </>
   );
 }
-    
+    <>
+      {/* <Header /> */}
+      {/* <EmployeeDashboard /> */}
+    </>
 export default App;
