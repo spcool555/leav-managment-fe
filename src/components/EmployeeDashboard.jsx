@@ -186,43 +186,34 @@ const EmployeeDashboard = () => {
               {/* Leave Status */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <h3 className="font-medium text-gray-900 mb-2">Leave Balance</h3>
-               {leaveStats ? (
-  <div className="space-y-2">
-    <div className="flex justify-between">
-      <span>Annual Leave:</span>
-      <span className="text-purple-600 font-medium">
-        {leaveStats?.annual_leave?.remaining ?? 0}/
-        {leaveStats?.annual_leave?.total ?? 0} days
-      </span>
-    </div>
-
-    <div className="flex justify-between">
-      <span>Casual Leave:</span>
-      <span className="text-blue-600 font-medium">
-        {leaveStats?.casual_leave?.remaining ?? 0}/
-        {leaveStats?.casual_leave?.total ?? 0} days
-      </span>
-    </div>
-
-    <div className="flex justify-between">
-      <span>Sick Leave:</span>
-      <span className="text-red-600 font-medium">
-        {leaveStats?.sick_leave?.remaining ?? 0}/
-        {leaveStats?.sick_leave?.total ?? 0} days
-      </span>
-    </div>
-
-    <div className="flex justify-between pt-2 border-t border-gray-200">
-      <span className="font-medium">Total Used:</span>
-      <span className="text-orange-600 font-medium">
-        {leaveStats?.total_used ?? 0} days
-      </span>
-    </div>
-  </div>
-) : (
-  <p className="text-gray-500">Loading stats...</p>
-)}
-
+                {leaveStats ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Annual Leave:</span>
+                      <span className="text-purple-600 font-medium">
+                        {leaveStats.annual_leave.remaining}/{leaveStats.annual_leave.total} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Casual Leave:</span>
+                      <span className="text-blue-600 font-medium">
+                        {leaveStats.casual_leave.remaining}/{leaveStats.casual_leave.total} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Sick Leave:</span>
+                      <span className="text-red-600 font-medium">
+                        {leaveStats.sick_leave.remaining}/{leaveStats.sick_leave.total} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="font-medium">Total Used:</span>
+                      <span className="text-orange-600 font-medium">{leaveStats.total_used} days</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Loading stats...</p>
+                )}
               </div>
 
               <button
