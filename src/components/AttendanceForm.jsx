@@ -155,9 +155,8 @@ const AttendanceForm = () => {
     >
       <option value="">-- Select Shift --</option>
       <option value="general">General (9:30 AM – 6:00 PM)</option>
-      <option value="morning">Morning (7:00 AM – 2:00 PM)</option>
-      <option value="evening">Evening (2:00 PM – 10:00 PM)</option>
-      <option value="night">Night (10:00 PM – 7:00 AM)</option>
+      <option value="evening">Evening (5:00 PM – 1:00 AM)</option>
+      <option value="night">Night (1:00 AM – 9:00 AM)</option>
     </select>
   </div>
 

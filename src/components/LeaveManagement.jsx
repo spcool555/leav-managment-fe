@@ -3,6 +3,7 @@ import { Calendar, CheckCircle, XCircle, Clock, Filter, User, FileText, MessageS
 import api, { API_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
 
+
 const LeaveManagement = () => {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +12,7 @@ const LeaveManagement = () => {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [adminComment, setAdminComment] = useState('');
   const [actionType, setActionType] = useState('');
-
+  
   useEffect(() => {
     fetchLeaves();
   }, [filter]);
@@ -40,7 +41,7 @@ const LeaveManagement = () => {
     if (!selectedLeave) return;
 
     try {
-      const endpoint = actionType === 'approve' 
+      const endpoint = actionType === 'approve'
         ? `/admin/leave/${selectedLeave.id}/approve`
         : `/admin/leave/${selectedLeave.id}/reject`;
 
@@ -135,9 +136,8 @@ const LeaveManagement = () => {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Leave List */}
+      </div>  
+    {/* Leave List */}
       <div className="p-6">
         {loading ? (
           <div className="flex justify-center items-center py-12">
@@ -356,5 +356,4 @@ const LeaveManagement = () => {
     </div>
   );
 };
-
 export default LeaveManagement;

@@ -9,9 +9,9 @@ import LeaveHistory from './LeaveHistory';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const EmployeeDashboard = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+const EmployeeDashboard = () => {   // ✅ FIX 1
+  const navigate = useNavigate();   // ✅ FIX 2
+  const { user } = useAuth();       // ✅ FIX 3
 
   // ---------------- STATE ----------------
   const [attendanceStatus, setAttendanceStatus] = useState(null);
@@ -24,8 +24,16 @@ const EmployeeDashboard = () => {
   const [leaveStats, setLeaveStats] = useState(null);
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
+  const [activeShift, setActiveShift] = useState(null);
+  const [monthlyAttendance, setMonthlyAttendance] = useState([]);
+  const [attendanceMonthLoading, setAttendanceMonthLoading] = useState(false);
 
   // ---------------- EFFECTS ----------------
+  useEffect(() => {
+    fetchActiveShift();
+    fetchMonthlyAttendance();
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -67,6 +75,28 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const fetchMonthlyAttendance = async () => {
+    setAttendanceMonthLoading(true);
+    try {
+      const res = await api.get(`/attendance/monthly/${user.id}`);
+      setMonthlyAttendance(res.data);
+    } catch (err) {
+      toast.error("Failed to load monthly attendance");
+    } finally {
+      setAttendanceMonthLoading(false);
+    }
+  };
+
+  const fetchActiveShift = async () => {
+    try {
+      const employeeId = localStorage.getItem('employee_id');
+      const res = await api.get(`/attendance/active/${employeeId}`);
+      setActiveShift(res.data?.active ? res.data : null);
+    } catch (err) {
+      console.error('Active shift error', err);
+    }
+  };
+
   // ---------------- HANDLERS ----------------
   const handleMarkAttendance = () => {
     navigate('/attendance');
@@ -75,11 +105,6 @@ const EmployeeDashboard = () => {
   const handleLeaveSubmitted = () => {
     fetchLeaveStats();
     fetchLeaveHistory();
-  };
-
-  const handleEditLeave = (leave) => {
-    setSelectedLeave(leave);
-    setShowEditModal(true);
   };
 
   const handleLeaveUpdated = () => {
@@ -95,6 +120,7 @@ const EmployeeDashboard = () => {
       </div>
     );
   }
+
 
   // ---------------- UI ----------------
   return (
@@ -311,8 +337,144 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         </div>
+           {/* Monthly Attendance */}
+<div className="bg-white rounded-xl shadow-lg p-8 mt-8">
+  <h2 className="text-xl font-bold text-gray-900 mb-4">
+    Monthly Attendance
+  </h2>
 
-       
+  {attendanceMonthLoading ? (
+    <p className="text-gray-500">Loading attendance...</p>
+  ) : monthlyAttendance.length === 0 ? (
+    <p className="text-gray-500">No attendance found</p>
+  ) : (
+    <div className="overflow-x-auto">
+
+        <table className="w-full table-auto border border-gray-200 rounded-lg">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Date
+            </th>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Check-In
+            </th>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Check-Out
+            </th>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Office Hours
+            </th>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Status
+            </th>
+            <th className="text-left px-4 py-3 border-b text-sm font-semibold text-gray-700">
+              Shift
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {monthlyAttendance.map((day, index) => (
+            <tr key={index} className="hover:bg-gray-50">
+              <td className="px-4 py-3 border-b text-sm text-gray-700">
+                {day.date || "-"}
+              </td>
+
+              <td className="px-4 py-3 border-b text-sm text-gray-700">
+                {day.check_in
+                  ? new Date(day.check_in).toLocaleTimeString()
+              : "—"}
+              </td>
+
+              <td className="px-4 py-3 border-b text-sm text-gray-700">
+                {day.check_out
+                ? new Date(day.check_out).toLocaleTimeString()
+                : "—"}
+              </td>
+
+              <td className="px-4 py-3 border-b text-sm text-gray-700">
+                {day.office_time || "—"}
+              </td>
+
+              <td className="px-4 py-3 border-b text-sm text-gray-700 text-center min-w-[170px]">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center whitespace-nowrap text-center
+                ${
+                      day.status === 'present' ? 'bg-green-100 text-green-700' :
+                      day.status === 'absent' ? 'bg-red-100 text-red-700' :
+                      day.status === 'leave' ? 'bg-blue-100 text-blue-700' :
+                      day.status === 'half_day_first_half' ? 'bg-yellow-100 text-yellow-700' :
+                      day.status === 'half_day_second_half' ? 'bg-yellow-100 text-yellow-700' :
+                      day.status === 'late' ? 'bg-purple-100 text-purple-700' : '' }`}
+                      >
+              {day.status ? day.status.replaceAll('_', ' ').toUpperCase() : '-'}
+              </span>
+              </td>
+
+              <td className="px-4 py-3 border-b text-sm text-gray-700">
+                  {day.shift_name || day.shift_type || "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+        {/* Leave Status / History */}
+      <div className="mt-10 bg-white rounded-xl shadow-lg">
+      <div className="p-6 border-b">
+        <h2 className="text-xl font-bold text-gray-900">
+          My Leave Requests
+        </h2>
+      </div>
+
+      <div className="p-6">
+        {leaveLoading ? (
+          <p className="text-gray-500 text-center">Loading leave history...</p>
+            ) : leaveHistory.length === 0 ? (
+          <p className="text-gray-500 text-center">
+            No leave requests found
+          </p>
+        ) : (
+          leaveHistory.map((leave) => (
+        <div
+          key={leave.id}
+          className="border rounded-lg p-4 mb-3 bg-gray-50"
+        >
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-medium text-gray-900">
+              {leave.leave_type.toUpperCase()} Leave
+            </h4>
+
+            {/* STATUS BADGE */}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold
+                ${leave.status === 'approved' && 'bg-green-100 text-green-700'}
+                ${leave.status === 'pending' && 'bg-yellow-100 text-yellow-700'}
+                ${leave.status === 'rejected' && 'bg-red-100 text-red-700'}
+              `}
+            >
+              {leave.status.toUpperCase()}
+            </span>
+          </div>
+
+          <p className="text-sm text-gray-600">
+            📅 {leave.start_date} → {leave.end_date}
+          </p>
+
+          {leave.admin_comment && (
+            <p className="text-sm text-gray-500 mt-2">
+              📝 Admin Comment: {leave.admin_comment}
+            </p>
+          )}
+        </div>
+      ))
+    )}
+  </div>
+</div>
       </main>
 
       {/* Leave Request Modal */}
@@ -341,5 +503,6 @@ const EmployeeDashboard = () => {
     </div>
   );
 };
+
 
 export default EmployeeDashboard;
