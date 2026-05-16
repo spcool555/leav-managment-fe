@@ -27,11 +27,14 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
   const [activeShift, setActiveShift] = useState(null);
   const [monthlyAttendance, setMonthlyAttendance] = useState([]);
   const [attendanceMonthLoading, setAttendanceMonthLoading] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementLoading, setAnnouncementLoading] = useState(true);
 
   // ---------------- EFFECTS ----------------
   useEffect(() => {
     fetchActiveShift();
     fetchMonthlyAttendance();
+    fetchAnnouncements();
   }, []);
 
   useEffect(() => {
@@ -96,6 +99,16 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
       console.error('Active shift error', err);
     }
   };
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await api.get('/announcements');
+      setAnnouncements(res.data);
+    } catch (err) {
+      console.error("Failed to fetch announcements");
+    } finally {
+      setAnnouncementLoading(false);
+    }
+  };
 
   // ---------------- HANDLERS ----------------
   const handleMarkAttendance = () => {
@@ -132,20 +145,22 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Page Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
             Manage Your Attendance & Leaves
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-1">
             Track your daily attendance, request leaves, and stay updated with your work schedule.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Row 1: primary actions | Row 2: info — stacks on mobile */}
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:gap-10">
 
           {/* Attendance Card */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="text-center">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 h-full flex flex-col">
+            <div className="text-center flex flex-col flex-1 min-h-0">
               <div className="bg-primary-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                 <Clock className="h-10 w-10 text-primary-600" />
               </div>
@@ -166,37 +181,65 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
 
                 {attendanceStatus ? (
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Check-in:</span>
-                      <span className={attendanceStatus.checked_in ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                        {attendanceStatus.checked_in
-                          ? new Date(attendanceStatus.check_in_time).toLocaleTimeString()
-                          : 'Not checked in'}
-                      </span>
-                    </div>
+                    {(attendanceStatus.shifts_today > 0 || attendanceStatus.first_shift_check_in_done) && (
+                      <div className="rounded-md bg-primary-50 border border-primary-100 px-3 py-2 text-left text-xs text-primary-900 mb-2">
+                        {attendanceStatus.day_complete ? (
+                          <>You have used both shifts for today (<strong>2/2</strong>).</>
+                        ) : attendanceStatus.checked_in && attendanceStatus.active_shift_number ? (
+                          <>
+                            <strong>Shift {attendanceStatus.active_shift_number}</strong>: checked in. Check-out is
+                            allowed anytime; next check-in only after check-out.
+                          </>
+                        ) : attendanceStatus.first_shift_check_in_done &&
+                          attendanceStatus.can_check_in_again ? (
+                          <>
+                            <strong>Previous shift completed.</strong> You can check in for your next shift.
+                          </>
+                        ) : (
+                          <>
+                            Shifts today:{' '}
+                            <strong>
+                              {attendanceStatus.completed_shifts_today ?? 0}/2 completed
+                            </strong>
+                          </>
+                        )}
+                      </div>
+                    )}
 
-                    <div className="flex justify-between">
-                      <span>Check-out:</span>
-                      <span className={attendanceStatus.checked_out ? 'text-green-600 font-medium' : 'text-gray-400'}>
-                        {attendanceStatus.checked_out
-                          ? new Date(attendanceStatus.check_out_time).toLocaleTimeString()
-                          : 'Not checked out'}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Office Time:</span>
-                      <span className="text-blue-600 font-medium">
-                        {attendanceStatus.office_time || 'Not calculated'}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span className="font-medium">
-                        {attendanceStatus.status?.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
+                    {(attendanceStatus.shifts || []).length > 0 ? (
+                      <div className="space-y-3">
+                        {(attendanceStatus.shifts || []).map((s) => (
+                          <div
+                            key={s.shift_number}
+                            className="rounded-lg border border-gray-200 bg-white px-3 py-2"
+                          >
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2 mb-1">
+                              <div className="text-sm font-semibold text-gray-900">
+                                Shift {s.shift_number} ({(s.shift_type || '').toUpperCase()})
+                              </div>
+                              <div className="text-xs font-semibold text-gray-700">
+                                {(s.status || '').replace('_', ' ').toUpperCase() || '—'}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-y-1 text-xs text-gray-700 sm:grid-cols-2 sm:gap-x-4">
+                              <div>
+                                <span className="font-medium">Check-in:</span>{' '}
+                                {s.check_in_time ? new Date(s.check_in_time).toLocaleTimeString() : '—'}
+                              </div>
+                              <div>
+                                <span className="font-medium">Check-out:</span>{' '}
+                                {s.check_out_time ? new Date(s.check_out_time).toLocaleTimeString() : '—'}
+                              </div>
+                              <div className="sm:col-span-2">
+                                <span className="font-medium">Office time:</span> {s.office_time || '—'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">No attendance marked yet.</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-gray-500">Loading status...</p>
@@ -205,7 +248,7 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
 
               <button
                 onClick={handleMarkAttendance}
-                className="w-full btn-primary py-3 text-lg font-semibold flex items-center justify-center space-x-2"
+                className="mt-auto w-full btn-primary py-3 text-base sm:text-lg font-semibold flex items-center justify-center space-x-2"
               >
                 <Camera className="h-5 w-5" />
                 <span>Mark Attendance</span>
@@ -214,8 +257,8 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
           </div>
 
           {/* Leave Request Card */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="text-center">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 h-full flex flex-col">
+            <div className="text-center flex flex-col flex-1 min-h-0">
               <div className="bg-green-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                 <Calendar className="h-10 w-10 text-green-600" />
               </div>
@@ -273,72 +316,102 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
               </div>
 
               <button
-  onClick={() => {
-    console.log("CLICKED");
-    setShowLeaveModal(true);
-  }}
-  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold flex items-center justify-center space-x-2 rounded-lg"
->
-  <FileText className="h-5 w-5" />
-  <span>Request Leave</span>
-</button>
+                onClick={() => setShowLeaveModal(true)}
+                className="mt-auto w-full bg-green-600 hover:bg-green-700 text-white py-3 text-base sm:text-lg font-semibold flex items-center justify-center space-x-2 rounded-lg"
+              >
+                <FileText className="h-5 w-5" />
+                <span>Request Leave</span>
+              </button>
 
             </div>
           </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:gap-10">
           {/* Instructions Card */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 h-full">
             <h3 className="text-xl font-bold text-gray-900 mb-6">
               Instructions
             </h3>
 
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
-                <Camera className="h-4 w-4 text-primary-600 mt-1" />
+                <Camera className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                   Photo required for both check-in and check-out
                 </p>
               </div>
 
               <div className="flex items-start space-x-3">
-                <MapPin className="h-4 w-4 text-primary-600 mt-1" />
+                <MapPin className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                   Allow location access for GPS tracking
                 </p>
               </div>
 
               <div className="flex items-start space-x-3">
-                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <Clock className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                 Attendance is calculated based on the assigned shift timings of the employee
                 </p>
               </div>
 
               <div className="flex items-start space-x-3">
-                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <Clock className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                 Checking in after the allowed time will mark the attendance as Late
                 </p>
               </div>
 
               <div className="flex items-start space-x-3">
-                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <Clock className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                 Checking in after the half-day cut-off time will result in Half Day(First Half Absent)
                 </p>
               </div>
 
               <div className="flex items-start space-x-3">
-                <Clock className="h-4 w-4 text-primary-600 mt-1" />
+                <Clock className="h-4 w-4 text-primary-600 mt-1 shrink-0" />
                 <p className="text-gray-600 text-sm">
                 Checks out before minimum working hours will lead to Half Day(Second Half Absent)
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Announcements */}
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 h-full flex flex-col">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Announcements
+            </h2>
+
+            {announcementLoading ? (
+              <p className="text-gray-500">Loading announcements...</p>
+            ) : announcements.length === 0 ? (
+              <p className="text-gray-500">No announcements yet</p>
+            ) : (
+              <div className="space-y-3 flex-1 overflow-y-auto max-h-[min(420px,60vh)] pr-1">
+                {announcements.map((item, index) => (
+                  <div
+                    key={item.id ?? index}
+                    className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded"
+                  >
+                    <p className="text-gray-800 text-sm sm:text-base break-words">{item.message}</p>
+
+                    <p className="text-xs text-gray-500 mt-2">
+                      {item.created_at && !Number.isNaN(new Date(item.created_at).getTime())
+                        ? new Date(item.created_at).toLocaleString()
+                        : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          </div>
         </div>
            {/* Monthly Attendance */}
-<div className="bg-white rounded-xl shadow-lg p-8 mt-8">
+<div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mt-8">
   <h2 className="text-xl font-bold text-gray-900 mb-4">
     Monthly Attendance
   </h2>

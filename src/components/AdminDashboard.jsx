@@ -29,6 +29,15 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({});
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [filteredEmployees, setFilteredEmployees] = useState([]); 
+  const [activeIndex, setActiveIndex] = useState(null);
+  const COLORS = [
+    "#22c55e", // Present (green)
+    "#eab308", // Late (yellow)
+    "#f97316", // Half day (orange)
+    "#ef4444"  // Absent (red)
+  ];
   const [filters, setFilters] = useState({
     employee_id: '',
     start_date: '',
@@ -40,17 +49,45 @@ const AdminDashboard = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [selectedEmployeeForPassword, setSelectedEmployeeForPassword] = useState(null);
+  const [announcement, setAnnouncement] = useState("");
+  const [announcements, setAnnouncements] = useState([]);
+  
 
+  
   useEffect(() => {
     fetchData();
   }, []);
+  
+  const statusMap = {
+    Present: "present",
+    Late: "late",
+    "Half Day": "half_day",
+    Absent: "absent"
+  };
+
+  const statusKeyToLabel = {
+    present: 'Present',
+    late: 'Late',
+    half_day: 'Half Day',
+    absent: 'Absent'
+  };
+
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await api.get('/announcements');
+      setAnnouncements(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Failed to fetch announcements:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
       await Promise.all([
         fetchStats(),
         fetchAttendanceLogs(),
-        fetchEmployees()
+        fetchEmployees(),
+        fetchAnnouncements()
       ]);
     } catch (error) {
       toast.error('Failed to fetch data');
@@ -109,25 +146,38 @@ const AdminDashboard = () => {
   };
 
   const exportToExcel = async () => {
+
+    // ✅ Validation (try ke pehle bhi rakh sakte ho)
+    if (!filters.start_date || !filters.end_date) {
+      toast.error("Please select Start Date and End Date");
+      return;
+    }
+  
     try {
       const queryParams = new URLSearchParams(filters).toString();
+  
       const response = await api.get(`/admin/attendance/export?${queryParams}`, {
-        responseType: 'blob'
+        responseType: "blob",
       });
-      
+  
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.setAttribute(
+        "download",
+        `attendance_report_${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+  
       document.body.appendChild(link);
       link.click();
       link.remove();
-      
-      toast.success('Report exported successfully');
+  
+      toast.success("Report exported successfully");
     } catch (error) {
-      toast.error('Failed to export report');
+      console.error(error);
+      toast.error("Failed to export report");
     }
-  };
+  };  
 
   const viewImage = (filename, type) => {
     if (!filename) {
@@ -144,7 +194,7 @@ const AdminDashboard = () => {
 
   const closeImageModal = () => {
     setShowImageModal(false);
-    setSelectedImage(null);
+    setSelectedImage(null);  
   };
 
   const handleChangePassword = (employee) => {
@@ -157,24 +207,71 @@ const AdminDashboard = () => {
     setSelectedEmployeeForPassword(null);
   };
 
+  const handlePostAnnouncement = async () => {
+    const text = announcement.trim();
+    if (!text) return;
+
+    try {
+      await api.post('/admin/announcements', {
+        message: text,
+        admin_id: user?.id ?? null
+      });
+      setAnnouncement('');
+      toast.success('Announcement posted');
+      await fetchAnnouncements();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || 'Failed to post announcement');
+    }
+  };
+
   // Prepare pie chart data
+  // 👇 uske niche pieChartData
   const pieChartData = [
-    { name: 'Present', value: stats.present || 0, color: '#10B981' },
-    { name: 'Late', value: stats.late || 0, color: '#F59E0B' },
+    { name: 'Present', value: stats.present || 0 },
+    { name: 'Late', value: stats.late || 0 },
     {
       name: 'Half Day',
-      value: (stats.half_day_first_half || 0) + (stats.half_day_second_half || 0),
-      color: '#F97316'
+      value: (stats.half_day_first_half || 0) + (stats.half_day_second_half || 0)
     },
-    { name: 'Absent', value: stats.absent || 0, color: '#EF4444' }
+    { name: 'Absent', value: stats.absent || 0 }
   ];
+
+  const handleTopCardClick = async (status) => {
+    setSelectedStatus(statusKeyToLabel[status] || status);
+  
+    try {
+      const res = await api.get(`/admin/employees-by-status?status=${status}`);
+      setFilteredEmployees(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch employees");
+    }
+  };
+
+  const handleChartClick = async (payload) => {
+    const clickedName = payload?.name ?? payload?.payload?.name;
+    const status = statusMap[clickedName];
+
+    if (!status) return;
+
+    setSelectedStatus(clickedName);
+
+    try {
+      const res = await api.get(`/admin/employees-by-status?status=${status}`);
+      setFilteredEmployees(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to fetch employees');
+    }
+  };
 
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+  
     return (
       <text
         x={x}
@@ -207,7 +304,10 @@ const AdminDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+         <div
+          onClick={() => handleTopCardClick("present")}
+            className="bg-white rounded-lg shadow p-6 w-full text-left hover:shadow-md cursor-pointer"
+            >
             <div className="flex items-center">
               <div className="bg-green-100 rounded-full p-3">
                 <UserCheck className="h-6 w-6 text-green-600" />
@@ -219,7 +319,10 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+          onClick={() => handleTopCardClick("late")}
+          className="bg-white rounded-lg shadow p-6 w-full text-left hover:shadow-md cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="bg-yellow-100 rounded-full p-3">
                 <Clock className="h-6 w-6 text-yellow-600" />
@@ -231,7 +334,10 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+          onClick={() => handleTopCardClick("half_day")}
+          className="bg-white rounded-lg shadow p-6 w-full text-left hover:shadow-md cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="bg-orange-100 rounded-full p-3">
                 <AlertCircle className="h-6 w-6 text-orange-600" />
@@ -243,7 +349,10 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+          onClick={() => handleTopCardClick("absent")}
+          className="bg-white rounded-lg shadow p-6 w-full text-left hover:shadow-md cursor-pointer"
+          >
             <div className="flex items-center">
               <div className="bg-red-100 rounded-full p-3">
                 <UserX className="h-6 w-6 text-red-600" />
@@ -255,64 +364,139 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+ 
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8 mb-8">
+          {/* Today's Attendance + chart */}
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex flex-col min-h-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Today&apos;s Attendance</h3>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Pie Chart */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Attendance</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomizedLabel}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 space-y-2">
-                {pieChartData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-full mr-2" 
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className="text-sm text-gray-600">{item.name}</span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{item.value}</span>
-                  </div>
-                ))}
+            <div className="relative h-56 sm:h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={56}
+                    outerRadius={88}
+                    dataKey="value"
+                    label={renderCustomizedLabel}
+                    onMouseEnter={(_, index) => setActiveIndex(index)}
+                    onMouseLeave={() => setActiveIndex(null)}
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index]}
+                        onClick={() => handleChartClick(entry)}
+                        style={{
+                          transform: activeIndex === index ? 'scale(1.06)' : 'scale(1)',
+                          transformOrigin: 'center',
+                          transition: '0.2s',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-gray-900">{stats.total_employees ?? 0}</span>
+                <span className="text-xs text-gray-500">Total staff</span>
               </div>
             </div>
+
+            <div className="mt-4 space-y-2">
+              {pieChartData.map((item, index) => (
+                <button
+                  type="button"
+                  key={item.name}
+                  className="flex w-full items-center justify-between rounded p-2 text-left hover:bg-gray-100"
+                  onClick={() => handleChartClick(item)}
+                >
+                  <div className="flex items-center min-w-0">
+                    <div
+                      className="mr-2 h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: COLORS[index] }}
+                    />
+                    <span className="text-sm text-gray-600 truncate">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 shrink-0">{item.value}</span>
+                </button>
+              ))}
+            </div>
+
+            {selectedStatus && (
+              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-gray-900 capitalize">
+                  Today — {selectedStatus}
+                </h3>
+                {filteredEmployees.length === 0 ? (
+                  <p className="text-sm text-gray-500">No employees in this category</p>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto rounded border border-gray-100 bg-white">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-gray-100">
+                        <tr>
+                          <th className="p-2">Name</th>
+                          <th className="p-2">Employee ID</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredEmployees.map((emp, i) => (
+                          <tr key={`${emp.employee_id}-${i}`} className="border-t border-gray-100 hover:bg-gray-50">
+                            <td className="p-2">{emp.employee_name}</td>
+                            <td className="p-2">{emp.employee_id}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Placeholder Charts */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Attendance Trend</h3>
-              <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500">Chart placeholder - Coming soon</p>
-              </div>
+          {/* Announcements */}
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex flex-col min-h-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Announcements</h3>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <input
+                type="text"
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                placeholder="Write an announcement..."
+                className="flex-1 min-w-0 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handlePostAnnouncement}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shrink-0"
+              >
+                Post
+              </button>
             </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Department Overview</h3>
-              <div className="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500">Chart placeholder - Coming soon</p>
-              </div>
+
+            <div className="space-y-3 max-h-72 overflow-y-auto flex-1">
+              {announcements.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No announcements yet</p>
+              ) : (
+                announcements.map((item) => (
+                  <div
+                    key={item.id ?? item.created_at}
+                    className="p-4 rounded-xl bg-gray-50 border border-gray-200"
+                  >
+                    <p className="text-sm text-gray-800 break-words">{item.message}</p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {item.created_at
+                        ? new Date(item.created_at).toLocaleString()
+                        : ''}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -462,10 +646,7 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                       {attendanceLogs.length > 0 ? (
-                  attendanceLogs.map((log) =>{
-                    console.log("ATTENDANCE LOG",log);
-                    return(
-                    
+                  attendanceLogs.map((log) => (
                     <tr key={log.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
@@ -493,7 +674,8 @@ const AdminDashboard = () => {
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           log.status === 'present' ? 'bg-green-100 text-green-800' :
                           log.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
-                          log.status === 'half_day' ? 'bg-orange-100 text-orange-800' :
+                          log.status === 'half_day' || log.status === 'half_day_first_half' || log.status === 'half_day_second_half'
+                            ? 'bg-orange-100 text-orange-800' :
                           'bg-red-100 text-red-800'
                         }`}>
                           {log.status?.replace('_', ' ').toUpperCase()}
@@ -533,21 +715,12 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                     </tr>
-                    );
-                    })
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                       No attendance records found
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {log.shift_type ? log.shift_type.toUpperCase() : "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {log.user_message || '-'}
-              </td>
                   </tr>
                 )}
               </tbody>

@@ -27,6 +27,12 @@ const AttendanceForm = () => {
     getCurrentLocation();
   }, []);
 
+  useEffect(() => {
+    if (attendanceStatus?.checked_in && attendanceStatus?.active_shift_type) {
+      setShiftType(attendanceStatus.active_shift_type);
+    }
+  }, [attendanceStatus?.checked_in, attendanceStatus?.active_shift_type]);
+
   const fetchAttendanceStatus = async () => {
     try {
       const response = await api.get(`/attendance/status/${user.id}`);
@@ -76,11 +82,10 @@ const AttendanceForm = () => {
   };
 
   const submitAttendance = async () => {
-    if (!shiftType)
-            {   
-              alert('Please select your shift');         
-              return;
-            }
+    if (isCheckingIn && !shiftType) {
+      alert('Please select your shift');
+      return;
+    }
     if (!capturedImage) {
       toast.error('Please capture a photo');
       return;
@@ -100,7 +105,10 @@ const AttendanceForm = () => {
       
       const formData = new FormData();
       formData.append('employee_id', user.id);
-      formData.append('shift_type', shiftType);
+      formData.append(
+        'shift_type',
+        shiftType || attendanceStatus?.active_shift_type || 'general'
+      );
       formData.append('location', location);
       formData.append('user_message', userMessage);
       formData.append('photo', blob, `${user.id}_${Date.now()}.jpg`);
@@ -142,6 +150,67 @@ const AttendanceForm = () => {
             <p className="text-gray-600">Employee Name: {user.full_name}</p>
           </div>
 
+          {attendanceStatus?.checked_in && attendanceStatus?.active_shift_number != null && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span className="font-semibold">
+                Shift {attendanceStatus.active_shift_number}: you are checked in.
+              </span>{' '}
+              You can <strong>check out at any time</strong> (even before scheduled shift end). After check-out, you
+              can check in again for another shift when allowed.
+            </div>
+          )}
+
+          {attendanceStatus?.day_complete && (
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+              You have completed <strong>both shifts</strong> for today (2/2). No further check-ins are allowed.
+            </div>
+          )}
+
+          {!attendanceStatus?.checked_in &&
+            attendanceStatus?.first_shift_check_in_done &&
+            attendanceStatus?.can_check_in_again && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                <span className="font-semibold">Your previous shift is complete.</span> You can check in for your next
+                shift.
+              </div>
+            )}
+
+          {(attendanceStatus?.shifts || []).length > 0 && (
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900">
+              <div className="font-semibold mb-2">Today’s shifts</div>
+              <div className="space-y-2">
+                {attendanceStatus.shifts.map((s) => (
+                  <div
+                    key={s.shift_number}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm font-semibold text-gray-900">
+                        Shift {s.shift_number} ({(s.shift_type || '').toUpperCase()})
+                      </div>
+                      <div className="text-xs font-semibold text-gray-700">
+                        {(s.status || '').replace('_', ' ').toUpperCase() || '—'}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700">
+                      <div>
+                        <span className="font-medium">Check-in:</span>{' '}
+                        {s.check_in_time ? new Date(s.check_in_time).toLocaleTimeString() : '—'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Check-out:</span>{' '}
+                        {s.check_out_time ? new Date(s.check_out_time).toLocaleTimeString() : '—'}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-medium">Office time:</span> {s.office_time || '—'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
   {/* Shift Selection */}
   <div className="mb-4">
     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -151,13 +220,35 @@ const AttendanceForm = () => {
     <select
     value={shiftType}
     onChange={(e) => setShiftType(e.target.value)}
-    className="w-full border rounded px-3 py-2"
+    disabled={!!attendanceStatus?.checked_in || !!attendanceStatus?.day_complete}
+    className="w-full border rounded px-3 py-2 disabled:cursor-not-allowed disabled:bg-gray-100"
     >
       <option value="">-- Select Shift --</option>
-      <option value="general">General (9:30 AM – 6:00 PM)</option>
-      <option value="evening">Evening (5:00 PM – 1:00 AM)</option>
-      <option value="night">Night (1:00 AM – 9:00 AM)</option>
+      <option
+        value="general"
+        disabled={(attendanceStatus?.used_shift_types || []).includes('general')}
+      >
+        General (9:30 AM – 6:00 PM)
+      </option>
+      <option
+        value="evening"
+        disabled={(attendanceStatus?.used_shift_types || []).includes('evening')}
+      >
+        Evening (5:00 PM – 1:00 AM)
+      </option>
+      <option
+        value="night"
+        disabled={(attendanceStatus?.used_shift_types || []).includes('night')}
+      >
+        Night (1:00 AM – 9:00 AM)
+      </option>
     </select>
+    {isCheckingIn && (attendanceStatus?.used_shift_types || []).length > 0 && (
+      <p className="mt-1 text-xs text-gray-500">
+        Already used today: <span className="font-medium">{attendanceStatus.used_shift_types.join(', ')}</span>. You
+        must select a different shift for the next check-in.
+      </p>
+    )}
   </div>
 
           {/* Photo Capture Section */}
