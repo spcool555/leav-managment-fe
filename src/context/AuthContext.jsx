@@ -53,12 +53,8 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(userData));
         
-        // Navigate based on user role
-        if (userData.is_admin) {
-          navigate('/predashboard');
-        } else {
-          navigate('/dashboard');
-        }
+        // Both admins and employees land on the pre-dashboard (workspace chooser)
+        navigate('/predashboard');
         
         return true;
       }

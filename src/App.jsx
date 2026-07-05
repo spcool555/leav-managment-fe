@@ -53,11 +53,11 @@ const LoginRoute = () => {
     );
   }
   
-  // If user is authenticated, redirect to appropriate dashboard
+  // If user is authenticated, redirect to the pre-dashboard (workspace chooser)
   if (isAuthenticated) {
-    return <Navigate to={user?.is_admin ? "/predashboard" : "/dashboard"} replace />;
+    return <Navigate to="/predashboard" replace />;
   }
-  
+
   // If not authenticated, show login page
   return <Login />;
 };
@@ -77,7 +77,7 @@ const RootRoute = () => {
   
   // Redirect based on authentication status
   if (isAuthenticated) {
-    return <Navigate to={user?.is_admin ? "/predashboard" : "/dashboard"} replace />;
+    return <Navigate to="/predashboard" replace />;
   } else {
     return <Navigate to="/login" replace />;
   }
@@ -109,7 +109,7 @@ const AppRoutes = () => {
           <Route
             path="/predashboard"
             element={
-              <ProtectedRoute adminOnly={true}>
+              <ProtectedRoute>
                 <PreDashboard />
               </ProtectedRoute>
             }

@@ -12,8 +12,8 @@ const PreDashboard = () => {
   const { user, logout } = useAuth();
 
   const handleAttendance = () => {
-    // Open the Attendance (leave management) dashboard within this app
-    navigate('/admin');
+    // Open the Attendance dashboard within this app (admin vs employee view)
+    navigate(user?.is_admin ? '/admin' : '/dashboard');
   };
 
   const handleErp = () => {
