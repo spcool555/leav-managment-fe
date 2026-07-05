@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
         
         // Navigate based on user role
         if (userData.is_admin) {
-          navigate('/admin');
+          navigate('/predashboard');
         } else {
           navigate('/dashboard');
         }
