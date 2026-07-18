@@ -543,6 +543,7 @@ const EmployeeDashboard = () => {   // ✅ FIX 1
             <p className="text-sm text-gray-500 mt-2">
               📝 Admin Comment: {leave.admin_comment}
             </p>
+            
           )}
         </div>
       ))

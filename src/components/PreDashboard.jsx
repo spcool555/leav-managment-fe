@@ -77,9 +77,9 @@ const PreDashboard = () => {
               <div className="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center mb-6 group-hover:bg-purple-600 transition-colors">
                 <Building2 className="w-7 h-7 text-purple-600 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-1">ERP</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-1">Material Inventory</h3>
               <p className="text-sm text-gray-500 mb-6">
-                Open the ERP system in a separate application.
+                Open the Material Inventory system in a separate application.
               </p>
               <span className="inline-flex items-center gap-1 text-sm font-medium text-purple-600">
                 Open <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
