@@ -169,7 +169,7 @@ const AttendanceForm = () => {
           {!attendanceStatus?.checked_in &&
             attendanceStatus?.first_shift_check_in_done &&
             attendanceStatus?.can_check_in_again && (
-              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
                 <span className="font-semibold">Your previous shift is complete.</span> You can check in for your next
                 shift.
               </div>
@@ -231,16 +231,22 @@ const AttendanceForm = () => {
         General (9:30 AM – 6:00 PM)
       </option>
       <option
+        value="morning"
+        disabled={(attendanceStatus?.used_shift_types || []).includes('morning')}
+      >
+        Morning (8:00 AM – 4:30 PM)
+      </option>
+      <option
         value="evening"
         disabled={(attendanceStatus?.used_shift_types || []).includes('evening')}
       >
-        Evening (5:00 PM – 1:00 AM)
+        Evening (4:00 PM – 12:00 AM)
       </option>
       <option
         value="night"
         disabled={(attendanceStatus?.used_shift_types || []).includes('night')}
       >
-        Night (1:00 AM – 9:00 AM)
+        Night (12:00 AM – 8:00 AM)
       </option>
     </select>
     {isCheckingIn && (attendanceStatus?.used_shift_types || []).length > 0 && (

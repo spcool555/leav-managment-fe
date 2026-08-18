@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, employeeData }) => {
   const [formData, setFormData] = useState({
-    leave_type: 'casual',
+    leave_type: 'emergency',
     start_date: '',
     end_date: '',
     reason: '',
@@ -112,7 +112,7 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
       
       // Reset form
       setFormData({
-        leave_type: 'casual',
+        leave_type: 'emergency',
         start_date: '',
         end_date: '',
         reason: '',
@@ -197,14 +197,14 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
               className="input-field"
               required
             >
-              <option value="casual">Casual Leave</option>
+              <option value="emergency">Emergency Leave</option>
               <option value="sick">Sick Leave</option>
-              <option value="Compensatory_off">Compensatory_off Leave</option>
+              <option value="Compensatory_off">Compensatory Leave</option>
             </select>
           </div>
 
           {/* Half Day Toggle */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -218,16 +218,16 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
                     end_date: isHalfDay ? formData.start_date : formData.end_date
                   });
                 }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
               />
-              <span className="ml-3 text-sm font-medium text-blue-900">
+              <span className="ml-3 text-sm font-medium text-green-900">
                 This is a half-day leave
               </span>
             </label>
             
             {formData.is_half_day && (
               <div className="mt-3">
-                <label className="block text-sm font-medium text-blue-900 mb-2">
+                <label className="block text-sm font-medium text-green-900 mb-2">
                   Select Half Day Period
                 </label>
                 <div className="flex space-x-4">
@@ -238,9 +238,9 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
                       value="first_half"
                       checked={formData.half_day_period === 'first_half'}
                       onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
                     />
-                    <span className="ml-2 text-sm text-blue-800">First Half (Morning)</span>
+                    <span className="ml-2 text-sm text-green-800">First Half (Morning)</span>
                   </label>
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -249,9 +249,9 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
                       value="second_half"
                       checked={formData.half_day_period === 'second_half'}
                       onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
                     />
-                    <span className="ml-2 text-sm text-blue-800">Second Half (Afternoon)</span>
+                    <span className="ml-2 text-sm text-green-800">Second Half (Afternoon)</span>
                   </label>
                 </div>
               </div>
@@ -299,10 +299,10 @@ const LeaveRequestModal = ({ isOpen, onClose, employeeId, onLeaveSubmitted, empl
 
           {/* Days Count Display */}
           {formData.start_date && formData.end_date && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-900">Total Days:</span>
-                <span className="text-lg font-bold text-blue-600">
+                <span className="text-sm font-medium text-green-900">Total Days:</span>
+                <span className="text-lg font-bold text-green-600">
                   {calculateDays()} {calculateDays() === 0.5 ? 'day (Half Day)' : calculateDays() === 1 ? 'day' : 'days'}
                 </span>
               </div>

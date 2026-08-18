@@ -4,7 +4,7 @@ import api, { API_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
 
 
-const LeaveManagement = () => {
+const LeaveManagement = ({ userCategory }) => {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
@@ -12,16 +12,21 @@ const LeaveManagement = () => {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [adminComment, setAdminComment] = useState('');
   const [actionType, setActionType] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // Smaller page size for leave requests since cards are large
   
   useEffect(() => {
+    setCurrentPage(1);
     fetchLeaves();
-  }, [filter]);
+  }, [filter, userCategory]);
 
   const fetchLeaves = async () => {
     setLoading(true);
     try {
-      const params = filter !== 'all' ? `?status=${filter}` : '';
-      const response = await api.get(`/admin/leaves${params}`);
+      const params = new URLSearchParams();
+      if (filter !== 'all') params.append('status', filter);
+      if (userCategory) params.append('category', userCategory);
+      const response = await api.get(`/admin/leaves?${params.toString()}`);
       setLeaves(response.data);
     } catch (error) {
       toast.error('Failed to fetch leave requests');
@@ -76,17 +81,79 @@ const LeaveManagement = () => {
   const getLeaveTypeColor = (type) => {
     const colors = {
       sick: 'text-red-600 bg-red-50 border-red-200',
-      casual: 'text-blue-600 bg-blue-50 border-blue-200',
+      emergency: 'text-green-600 bg-green-50 border-green-200',
+      casual: 'text-green-600 bg-green-50 border-green-200',
       Compensatory_off: 'text-purple-600 bg-purple-50 border-purple-200',
+      lwp: 'text-orange-600 bg-orange-50 border-orange-200',
     };
     return colors[type] || 'text-gray-600 bg-gray-50 border-gray-200';
   };
+
+  const [employees, setEmployees] = useState([]);
+  const [employeeIdFilter, setEmployeeIdFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
+  useEffect(() => {
+    fetchEmployeesList();
+  }, []);
+
+  const fetchEmployeesList = async () => {
+    try {
+      const res = await api.get('/admin/employees');
+      setEmployees(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLeaveMonthChange = (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    const [year, month] = val.split('-').map(Number);
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    setStartDateFilter(startDate);
+    setEndDateFilter(endDate);
+  };
+
+  const exportLeavesToExcel = async () => {
+    try {
+      const toastId = toast.loading('Exporting leave report...');
+      const params = new URLSearchParams();
+      if (filter !== 'all') params.append('status', filter);
+      if (employeeIdFilter) params.append('employee_id', employeeIdFilter);
+      if (startDateFilter) params.append('start_date', startDateFilter);
+      if (endDateFilter) params.append('end_date', endDateFilter);
+
+      const response = await api.get(`/admin/leaves/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `leave_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Leave report exported successfully!', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to export leave report');
+    }
+  };
+  const totalItems = leaves.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLeaves = leaves.slice(startIndex, endIndex);
 
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Leave Management</h3>
             <p className="text-sm text-gray-600 mt-1">Review and approve employee leave requests</p>
@@ -128,13 +195,66 @@ const LeaveManagement = () => {
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filter === 'all'
-                  ? 'bg-blue-100 text-blue-800'
+                  ? 'bg-green-100 text-green-800'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               All
             </button>
           </div>
+        </div>
+
+        {/* Excel Export & Filter Box */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <select
+              value={employeeIdFilter}
+              onChange={(e) => setEmployeeIdFilter(e.target.value)}
+              className="input-field text-xs py-1.5 px-2"
+            >
+              <option value="">All Employees</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.id} - {emp.full_name}</option>
+              ))}
+            </select>
+
+            <select
+              onChange={handleLeaveMonthChange}
+              className="input-field text-xs py-1.5 px-2"
+              defaultValue=""
+            >
+              <option value="" disabled>Select Month...</option>
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                return <option key={val} value={val}>{label}</option>;
+              })}
+            </select>
+
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              className="input-field text-xs py-1.5 px-2"
+            />
+
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              className="input-field text-xs py-1.5 px-2"
+            />
+          </div>
+
+          <button
+            onClick={exportLeavesToExcel}
+            className="btn-secondary flex items-center justify-center space-x-2 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 border-green-300 rounded-lg shadow-sm font-medium text-xs transition-colors shrink-0"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export Leave Report (Excel)</span>
+          </button>
         </div>
       </div>  
     {/* Leave List */}
@@ -152,8 +272,9 @@ const LeaveManagement = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {leaves.map((leave) => (
+          <>
+            <div className="space-y-4">
+            {paginatedLeaves.map((leave) => (
               <div
                 key={leave.id}
                 className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow"
@@ -194,7 +315,7 @@ const LeaveManagement = () => {
                         <Clock className="h-4 w-4 mr-1" />
                         {leave.days_count} day{leave.days_count > 1 ? 's' : ''}
                         {leave.is_half_day && (
-                          <span className="ml-1 text-xs font-medium text-blue-600">
+                          <span className="ml-1 text-xs font-medium text-green-600">
                             ({leave.half_day_period === 'first_half' ? 'First Half' : 'Second Half'})
                           </span>
                         )}
@@ -225,17 +346,17 @@ const LeaveManagement = () => {
                     </div>
 
                     {leave.supporting_document && (
-                      <div className="bg-blue-50 rounded-lg p-3 mb-2">
+                      <div className="bg-green-50 rounded-lg p-3 mb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <FileText className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-900">Supporting Document Attached</span>
+                            <FileText className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-900">Supporting Document Attached</span>
                           </div>
                           <a
                             href={`${API_BASE_URL}/leave/document/${leave.supporting_document}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            className="flex items-center space-x-1 text-xs text-green-600 hover:text-green-700 font-medium"
                           >
                             <Eye className="h-3 w-3" />
                             <span>View</span>
@@ -296,6 +417,68 @@ const LeaveManagement = () => {
               </div>
             ))}
           </div>
+
+          {/* Leave Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of{' '}
+                    <span className="font-medium">{totalItems}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                          currentPage === page
+                            ? 'z-10 bg-green-50 border-green-500 text-green-700 font-semibold'
+                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
 

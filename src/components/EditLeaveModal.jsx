@@ -159,7 +159,7 @@ const EmployeeDashboard = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>Office Time:</span>
-                      <span className={attendanceStatus.office_time ? 'text-blue-600 font-medium' : 'text-gray-400'}>
+                      <span className={attendanceStatus.office_time ? 'text-green-600 font-medium' : 'text-gray-400'}>
                         {attendanceStatus.office_time || 'Not calculated'}
                       </span>
                     </div>
@@ -214,7 +214,7 @@ const EmployeeDashboard = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>Casual Leave:</span>
-                      <span className="text-blue-600 font-medium">
+                      <span className="text-green-600 font-medium">
                       {leaveStats?.casual_leave?.remaining ?? 0}/{leaveStats?.casual_leave?.total ?? 0} days
                       </span>
                     </div>
@@ -286,9 +286,9 @@ const EmployeeDashboard = () => {
             </div>
 
             {/* Office Hours Info */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Attendance Rules</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <h4 className="font-medium text-green-900 mb-2">Attendance Rules</h4>
+              <ul className="text-sm text-green-800 space-y-1">
                 <li>• Attendance is calculated based on the assigned shift timings of the employee.</li>
                 <li>• Checking in after the allowed late time will mark the attendance as Late.</li>
                 <li>• Checking in after the half-day cut-off time will result in Half Day (First Half Absent).</li>

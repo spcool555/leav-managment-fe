@@ -88,7 +88,8 @@ const Header = ({
               <div className="relative hidden sm:block">
                 <button
                   onClick={() => setShowLangDropdown(!showLangDropdown)}
-                  className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow"
+                  style={{ backgroundColor: '#97D3CD', color: '#0d4039' }}
+                  className="hover:opacity-90 px-4 py-1.5 rounded-md text-sm font-bold shadow transition-opacity"
                 >
                   Language
                 </button>

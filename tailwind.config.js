@@ -8,16 +8,16 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f9fffe',
+          100: '#f5fdfc',
+          200: '#edfbf9',
+          300: '#e0f5f3',
+          400: '#ccebe8',
+          500: '#b3e0dc',
+          600: '#97d3cd', // Exact target color
+          700: '#7cbdbe', // Darker shade for hover state
+          800: '#629e97',
+          900: '#487f79',
         }
       },
       fontFamily: {

@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast';
 import Login from './components/Login';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
-import PreDashboard from './components/PreDashboard';
 import AttendanceForm from './components/AttendanceForm';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from "./components/Header";
@@ -32,9 +31,9 @@ const ProtectedRoute = ({ children, adminOnly = false, employeeOnly = false }) =
     return <Navigate to="/dashboard" replace />;
   }
   
-  // If employee-only route but user is admin, redirect to pre-dashboard
+  // If employee-only route but user is admin, redirect to admin dashboard
   if (employeeOnly && user?.is_admin) {
-    return <Navigate to="/predashboard" replace />;
+    return <Navigate to="/admin" replace />;
   }
   
   return children;
@@ -53,11 +52,11 @@ const LoginRoute = () => {
     );
   }
   
-  // If user is authenticated, redirect to the pre-dashboard (workspace chooser)
+  // If user is authenticated, redirect to appropriate dashboard
   if (isAuthenticated) {
-    return <Navigate to="/predashboard" replace />;
+    return <Navigate to={user?.is_admin ? "/admin" : "/dashboard"} replace />;
   }
-
+  
   // If not authenticated, show login page
   return <Login />;
 };
@@ -77,7 +76,7 @@ const RootRoute = () => {
   
   // Redirect based on authentication status
   if (isAuthenticated) {
-    return <Navigate to="/predashboard" replace />;
+    return <Navigate to={user?.is_admin ? "/admin" : "/dashboard"} replace />;
   } else {
     return <Navigate to="/login" replace />;
   }
@@ -106,21 +105,13 @@ const AppRoutes = () => {
               </ProtectedRoute>
             } 
           />
-          <Route
-            path="/predashboard"
-            element={
-              <ProtectedRoute>
-                <PreDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
+          <Route 
+            path="/admin" 
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminDashboard />
               </ProtectedRoute>
-            }
+            } 
           />
           <Route path="/" element={<RootRoute />} />
         </Routes>
@@ -141,7 +132,7 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <Router basename="/adminpage" future={{ v7_relativeSplatPath: true }}>
+    <Router future={{ v7_relativeSplatPath: true }}>
       <AppRoutes />
     </Router>
   );

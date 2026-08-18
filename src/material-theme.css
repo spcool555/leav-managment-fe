@@ -1,0 +1,154 @@
+/* ===========================================================
+   Material IMS Theme — ADD-ON stylesheet
+   Import this AFTER index.css. It re-skins the existing
+   .btn-primary / .btn-secondary / .input-field / .card classes
+   with a Material Design look (elevation, rip400 palette,
+   rounder corners, Roboto type) without editing any component
+   markup or logic. Also adds a few new utility classes
+   (.md-card, .md-btn-primary, .md-btn-secondary, .md-chip)
+   used by the new Team Dashboard / Junction Visit components.
+   =========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+:root {
+  --md-primary: #97d3cd; /* The exact target color #97D3CD */
+  --md-primary-dark: #7cbdbe; /* Darker shade for hover state */
+  --md-surface: #ffffff;
+  --md-bg: #f4f6fb; /* Original light grey/white background */
+  --md-on-surface: #202124; /* Original high-contrast neutral text */
+  --md-outline: #dadce0; /* Original clean neutral borders */
+  --md-success: #16a34a;
+  --md-success-bg: #edfbf2;
+  --md-warning: #c29300;
+  --md-warning-bg: #fefbeb;
+  --md-danger: #dc2626;
+  --md-danger-bg: #fef2f2;
+  --md-elevation-1: 0 1px 2px 0 rgba(60,64,67,0.30), 0 1px 3px 1px rgba(60,64,67,0.15);
+  --md-elevation-2: 0 1px 2px 0 rgba(60,64,67,0.30), 0 2px 6px 2px rgba(60,64,67,0.15);
+  --md-elevation-3: 0 4px 8px 3px rgba(60,64,67,0.15), 0 1px 3px 0 rgba(60,64,67,0.30);
+}
+
+body {
+  font-family: 'Roboto', 'Inter', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--md-bg) !important;
+}
+
+/* Re-skin existing shared classes (defined via @apply in index.css) */
+.btn-primary {
+  background-color: var(--md-primary) !important;
+  color: #0c4038 !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  box-shadow: var(--md-elevation-1);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+.btn-primary:hover {
+  background-color: var(--md-primary-dark) !important;
+  box-shadow: var(--md-elevation-2);
+}
+
+.btn-secondary {
+  background-color: #ffffff !important;
+  color: var(--md-primary) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.btn-secondary:hover {
+  background-color: #e8f5e9 !important;
+}
+
+.input-field, .input-field-with-icon {
+  border-radius: 8px !important;
+  border-color: var(--md-outline) !important;
+}
+.input-field:focus, .input-field-with-icon:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 1px var(--md-primary) !important;
+}
+
+.card {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: var(--md-elevation-1) !important;
+}
+
+/* Rounded corners + elevation on the large rounded-xl cards used across
+   AdminDashboard / EmployeeDashboard / AttendanceForm — pure visual add-on */
+.rounded-xl {
+  border-radius: 16px !important;
+}
+.shadow-lg {
+  box-shadow: var(--md-elevation-2) !important;
+}
+.shadow-sm {
+  box-shadow: var(--md-elevation-1) !important;
+}
+
+/* ---- New Material components used by TeamDashboard / JunctionVisitPanel ---- */
+.md-card {
+  background: var(--md-surface);
+  border-radius: 16px;
+  box-shadow: var(--md-elevation-1);
+  padding: 1.5rem;
+  transition: box-shadow 0.2s ease;
+}
+.md-card:hover {
+  box-shadow: var(--md-elevation-2);
+}
+
+.md-btn-primary {
+  background-color: var(--md-primary);
+  color: #0c4038 !important;
+  font-weight: 700 !important;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  box-shadow: var(--md-elevation-1);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.md-btn-primary:hover {
+  background-color: var(--md-primary-dark);
+  box-shadow: var(--md-elevation-2);
+}
+.md-btn-primary:disabled {
+  background-color: #9aa0a6;
+  color: #ffffff !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.md-btn-secondary {
+  background-color: #fff;
+  color: var(--md-primary);
+  border: 1px solid var(--md-outline);
+  font-weight: 500;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+}
+.md-btn-secondary:hover {
+  background-color: #e8f5e9;
+}
+
+.md-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background-color: #e8f5e9;
+  color: var(--md-primary);
+}
+.md-chip-success { background-color: var(--md-success-bg); color: var(--md-success); }
+.md-chip-warning { background-color: var(--md-warning-bg); color: var(--md-warning); }
+.md-chip-danger  { background-color: var(--md-danger-bg);  color: var(--md-danger); }
+
+/* Material ripple-ish focus ring for accessibility, additive only */
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}

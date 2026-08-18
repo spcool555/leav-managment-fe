@@ -53,8 +53,8 @@ const PasswordManagement = ({ onChangePassword }) => {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center mb-6">
-        <div className="bg-blue-100 rounded-full p-3 mr-4">
-          <Key className="h-6 w-6 text-blue-600" />
+        <div className="bg-green-100 rounded-full p-3 mr-4">
+          <Key className="h-6 w-6 text-green-600" />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Password Management</h3>

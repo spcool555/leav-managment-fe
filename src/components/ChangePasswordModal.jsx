@@ -72,8 +72,8 @@ const ChangePasswordModal = ({ isOpen, onClose, employee }) => {
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <div className="flex items-center space-x-3">
-            <div className="bg-blue-100 rounded-full p-2">
-              <Key className="h-5 w-5 text-blue-600" />
+            <div className="bg-green-100 rounded-full p-2">
+              <Key className="h-5 w-5 text-green-600" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
@@ -152,7 +152,7 @@ const ChangePasswordModal = ({ isOpen, onClose, employee }) => {
           </div>
 
           {/* Password Requirements */}
-          <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <div className="text-xs text-gray-600 bg-green-50 p-3 rounded-lg">
             <p className="font-medium mb-1">Password Requirements:</p>
             <ul className="space-y-1">
               <li>• Minimum 6 characters long</li>

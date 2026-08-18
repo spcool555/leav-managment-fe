@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ArrowLeft } from 'lucide-react';
+import { LogOut, ArrowLeft, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import logoImage from '../assets/DECOFURN.png';
+import logoImage from '../assets/KELTRON.png';
 
 const Header = ({
   title,
@@ -72,9 +72,8 @@ const Header = ({
               className="flex items-center cursor-pointer"
               onClick={handleLogoClick}
             >
-              <img src={logoImage} alt="Logo" className="h-8 w-8 mr-3" />
+              <img src={logoImage} alt="Keltron Logo" className="h-8 sm:h-12 md:h-14 max-w-[40vw] sm:max-w-xs w-auto mr-3 object-contain" />
               <h1 className="text-lg font-semibold text-gray-900">
-                <span className="text-primary-600">DECOFURN</span>
                 {title && <span className="ml-2 text-gray-600">{title}</span>}
               </h1>
             </div>
@@ -88,9 +87,11 @@ const Header = ({
               <div className="relative hidden sm:block">
                 <button
                   onClick={() => setShowLangDropdown(!showLangDropdown)}
-                  className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow"
+                  style={{ backgroundColor: '#97D3CD', color: '#0d4039' }}
+                  className="flex items-center gap-2 hover:opacity-90 px-4 py-1.5 rounded-md text-sm font-bold shadow transition-opacity"
                 >
-                  Language
+                  <Globe className="h-5 w-5" />
+  <span>Language</span>
                 </button>
 
                 {showLangDropdown && (
@@ -99,19 +100,19 @@ const Header = ({
                       onClick={() => handleLanguageChange('en')}
                       className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                     >
-                      EN
+                      ENGLISH
                     </button>
                     <button
                       onClick={() => handleLanguageChange('hi')}
                       className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                     >
-                      HI
+                      HINDI
                     </button>
                     <button
                       onClick={() => handleLanguageChange('mr')}
                       className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                     >
-                      MR
+                      MARATHI
                     </button>
                   </div>
                 )}
@@ -119,16 +120,27 @@ const Header = ({
 
               {showUserInfo && (
                 <span className="text-sm text-gray-700">
-                  Welcome, {user.full_name}
+                 Welcome, <span className="font-bold">{user.full_name}</span>
                 </span>
               )}
 
               {showLogout && (
                 <button
                   onClick={logout}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700"
+                  className="flex items-center justify-center space-x-2 px-4 py-1.5 rounded-md text-sm font-bold shadow transition"
+                  style={{
+                    border: '1px solid #d9534f',
+                    color: '#d9534f',
+                    backgroundColor: '#ffffff'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fff5f4';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                   }}
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Logout</span>
                 </button>
               )}
