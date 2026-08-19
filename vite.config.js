@@ -1,10 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
 export default defineConfig({
+  base: '/adminpage/',
+
   plugins: [
     react({
       babel: {
@@ -12,16 +8,11 @@ export default defineConfig({
       },
     }),
   ],
+
   css: {
     postcss: './postcss.config.js',
   },
-  // server: {
-  //   host: '0.0.0.0',
-  //   https: {
-  //     key: fs.readFileSync('./192.168.1.5-key.pem'),
-  //     cert: fs.readFileSync('./192.168.1.5.pem'),
-  //   },
-  // },
+
   server: {
     host: '0.0.0.0',
     port: 5173,
@@ -32,4 +23,3 @@ export default defineConfig({
     ],
   },
 })
-
