@@ -132,7 +132,7 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <Router future={{ v7_relativeSplatPath: true }}>
+   <Router basename="/adminpage" future={{ v7_relativeSplatPath: true }}>
       <AppRoutes />
     </Router>
   );
