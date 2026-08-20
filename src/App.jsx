@@ -146,8 +146,4 @@ function App() {
     </Router>
   );
 }
-    <>
-      {/* <Header /> */}
-      {/* <EmployeeDashboard /> */}
-    </>
 export default App;
