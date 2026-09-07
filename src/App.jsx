@@ -43,7 +43,8 @@ const ProtectedRoute = ({ children, adminOnly = false, employeeOnly = false }) =
 
 // Login Route Component - redirects authenticated users
 const LoginRoute = () => {
-  const { user, isAuthenticated, loading } = useAuth(user);
+  const { user, isAuthenticated, loading } = useAuth();
+  console.log(user)
   
   // Show loading spinner while checking authentication
   if (loading) {
