@@ -177,8 +177,8 @@ const GanttChart = ({ junctions = [] }) => {
   const isDayInVisitRange = (day, visit) => {
     const d = new Date(day.getFullYear(), day.getMonth(), day.getDate());
     const s = new Date(visit.startDate.getFullYear(), visit.startDate.getMonth(), visit.startDate.getDate());
-    const e = new Date(visit.endDate.getFullYear(), visit.endDate.getMonth(), visit.endDate.getDate());
-    return d >= s && d <= e;
+    const end = new Date(visit.endDate.getFullYear(), visit.endDate.getMonth(), visit.endDate.getDate());
+    return d >= s && d <= end;
   };
 
   const getDayInitial = (day) => {
