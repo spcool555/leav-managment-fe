@@ -17,7 +17,10 @@ import {
   MapPin,
   FileSpreadsheet,
   Trash2,
-  Building2
+  Building2,
+  Home,
+  Wrench,
+  Monitor
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { AuthProvider, useAuth } from '../context/AuthContext';
@@ -201,6 +204,25 @@ const AdminDashboard = () => {
     } catch (err) {
       toast.error('Failed to delete location');
     }
+  };
+
+  const handleJunctionUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const toastId = toast.loading('Uploading junctions, wards & zones...');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await api.post('/admin/junctions/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success(res.data.message || 'Upload successful', { id: toastId });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to upload file', { id: toastId });
+    }
+    e.target.value = '';
   };
   const statusMap = {
     Present: "present",
@@ -472,7 +494,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef8f1]">
+    <div className="flex-1 bg-[#eef8f1]">
        {/* Hanging Traffic Signal */}
 <div className="absolute top-0 right-2 z-20 pointer-events-none">
 
@@ -603,49 +625,53 @@ const AdminDashboard = () => {
   {/* Tabs */}
   <nav className="relative flex items-center overflow-x-auto">
     {[
-      { id: 'overview', label: '🏠 Overview' },
-      { id: 'field', label: '🔧 Field Team' },
-      { id: 'coc', label: '🖥️ COC Team' },
-      { id: 'ccc', label: '💻 CCC Team' }
-    ].map((tab) => (
-      <button
-        key={tab.id}
-        onClick={() => setActiveTab(tab.id)}
-        className={`
-          relative min-w-[155px]
-          px-7 py-4
-          text-sm md:text-base
-          font-medium
-          whitespace-nowrap
-          transition-all duration-300
-          border-r border-[#cfe4e1]/70
-          last:border-r-0
+      { id: 'overview', label: 'Overview', icon: Home },
+      { id: 'field', label: 'Field Team', icon: Wrench },
+      { id: 'coc', label: 'COC Team', icon: Monitor },
+      { id: 'ccc', label: 'CCC Team', icon: Monitor }
+    ].map((tab) => {
+      const IconComponent = tab.icon;
+      return (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
+          className={`
+            relative min-w-[155px]
+            px-7 py-4
+            text-sm md:text-base
+            font-medium
+            whitespace-nowrap
+            transition-all duration-300
+            border-r border-[#cfe4e1]/70
+            last:border-r-0
 
-          ${
-            activeTab === tab.id
-              ? `
-                bg-white/80
-                text-[#087f73]
-                shadow-[0_2px_8px_rgba(40,130,110,0.08)]
-              `
-              : `
-                text-[#40556a]
-                hover:bg-white/40
-                hover:text-[#087f73]
-              `
-          }
-        `}
-      >
-        <span className="relative z-10">
-          {tab.label}
-        </span>
+            ${
+              activeTab === tab.id
+                ? `
+                  bg-white/80
+                  text-[#087f73]
+                  shadow-[0_2px_8px_rgba(40,130,110,0.08)]
+                `
+                : `
+                  text-[#40556a]
+                  hover:bg-white/40
+                  hover:text-[#087f73]
+                `
+            }
+          `}
+        >
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            <IconComponent className="h-4 w-4" />
+            <span>{tab.label}</span>
+          </span>
 
-        {/* Active underline */}
-        {activeTab === tab.id && (
-          <span className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#35a66f] to-[#69b9d5]" />
-        )}
-      </button>
-    ))}
+          {/* Active underline */}
+          {activeTab === tab.id && (
+            <span className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#35a66f] to-[#69b9d5]" />
+          )}
+        </button>
+      );
+    })}
   </nav>
 </div>
 
@@ -975,6 +1001,23 @@ const AdminDashboard = () => {
                     >
                       <Upload className="h-5 w-5" />
                       <span>Upload Employees (Excel)</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <input
+                      type="file"
+                      id="junction-excel-upload-admin"
+                      accept=".xlsx, .xls, .csv"
+                      onChange={handleJunctionUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="junction-excel-upload-admin"
+                      className="w-full btn-secondary flex items-center justify-center space-x-2 py-3 cursor-pointer"
+                    >
+                      <Upload className="h-5 w-5 text-teal-600" />
+                      <span>Upload Junctions, Wards & Zones (Excel)</span>
                     </label>
                   </div>
                 </>

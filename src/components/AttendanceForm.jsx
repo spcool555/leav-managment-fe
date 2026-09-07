@@ -133,7 +133,7 @@ const AttendanceForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex-1 bg-gray-50">
       {/* Header */}
       <Header 
         title={isCheckingIn ? 'Check In' : 'Check Out'}

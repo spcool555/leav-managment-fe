@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, XCircle, Clock, Filter, User, FileText, MessageSquare, Mail, Phone, Download, Eye } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, Filter, User, FileText, MessageSquare, Mail, Phone, Download, Eye, X, BarChart2 } from 'lucide-react';
 import api, { API_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -14,6 +14,37 @@ const LeaveManagement = ({ userCategory }) => {
   const [actionType, setActionType] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Smaller page size for leave requests since cards are large
+
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyEmp, setHistoryEmp] = useState(null); // { id, name }
+  const [empHistoryLogs, setEmpHistoryLogs] = useState([]);
+  const [empHistoryStats, setEmpHistoryStats] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistoryModal = async (empId, empName) => {
+    setHistoryEmp({ id: empId, name: empName });
+    setHistoryModalOpen(true);
+    setHistoryLoading(true);
+    try {
+      const [historyRes, statsRes] = await Promise.all([
+        api.get(`/leave/employee/${empId}`),
+        api.get(`/leave/stats/${empId}`)
+      ]);
+      setEmpHistoryLogs(Array.isArray(historyRes.data) ? historyRes.data : []);
+      setEmpHistoryStats(statsRes.data);
+    } catch (err) {
+      toast.error('Failed to load employee leave history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const closeHistoryModal = () => {
+    setHistoryModalOpen(false);
+    setHistoryEmp(null);
+    setEmpHistoryLogs([]);
+    setEmpHistoryStats(null);
+  };
   
   useEffect(() => {
     setCurrentPage(1);
@@ -389,6 +420,67 @@ const LeaveManagement = ({ userCategory }) => {
                       </div>
                     )}
 
+                    {/* Employee Leave Stats Summary Box */}
+                    {leave.employee_stats && (
+                      <div className="mt-3 bg-gradient-to-r from-blue-50/70 to-teal-50/70 rounded-xl p-3 border border-blue-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <BarChart2 className="h-3.5 w-3.5 text-teal-600" /> Employee Leave Record & Balance
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openHistoryModal(leave.employee_id, leave.employee_name)}
+                            className="text-xs text-teal-700 hover:text-teal-900 font-semibold flex items-center gap-1 bg-white px-2.5 py-1 rounded-md border border-teal-200 shadow-xs transition"
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>View Full History</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                          {/* Leaves Taken / Approved */}
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-100 shadow-2xs">
+                            <div className="text-gray-500 font-semibold">Leaves Taken (Approved)</div>
+                            <div className="text-base font-bold text-green-700 mt-0.5">
+                              {leave.employee_stats.approved_days_taken} <span className="text-xs font-normal text-gray-500">days</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded text-[10px] font-medium border border-red-100">Sick: {leave.employee_stats.sick_used}d</span>
+                              <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-medium border border-green-100">Emerg: {leave.employee_stats.emergency_used}d</span>
+                              <span className="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded text-[10px] font-medium border border-purple-100">Comp: {leave.employee_stats.comp_used}d</span>
+                              {leave.employee_stats.lwp_used > 0 && (
+                                <span className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded text-[10px] font-medium border border-orange-100">LWP: {leave.employee_stats.lwp_used}d</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Pending Leaves */}
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-100 shadow-2xs">
+                            <div className="text-gray-500 font-semibold">Pending Approval</div>
+                            <div className="text-base font-bold text-yellow-600 mt-0.5">
+                              {leave.employee_stats.pending_requests_count} <span className="text-xs font-normal text-gray-500">request{leave.employee_stats.pending_requests_count > 1 ? 's' : ''} ({leave.employee_stats.pending_days_count}d)</span>
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-1.5">
+                              Awaiting admin decision
+                            </div>
+                          </div>
+
+                          {/* Remaining Quota */}
+                          <div className="bg-white p-2.5 rounded-lg border border-gray-100 shadow-2xs">
+                            <div className="text-gray-500 font-semibold">Remaining Leave Quota</div>
+                            <div className="text-base font-bold text-blue-700 mt-0.5">
+                              {leave.employee_stats.total_remaining} <span className="text-xs font-normal text-gray-500">days left</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              <span className="text-[10px] text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">Sick: {leave.employee_stats.sick_remaining}/8</span>
+                              <span className="text-[10px] text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">Emerg: {leave.employee_stats.emergency_remaining}/8</span>
+                              <span className="text-[10px] text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">Comp: {leave.employee_stats.comp_remaining}/8</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="mt-2 text-xs text-gray-400">
                       Submitted on {new Date(leave.created_at).toLocaleString()}
                     </div>
@@ -532,6 +624,118 @@ const LeaveManagement = ({ userCategory }) => {
                   Confirm {actionType === 'approve' ? 'Approval' : 'Rejection'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Leave History Modal */}
+      {historyModalOpen && historyEmp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-teal-600 to-green-600 text-white px-6 py-4 rounded-t-xl flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Leave History & Quota Ledger</h3>
+                <p className="text-xs text-green-100 mt-0.5">
+                  {historyEmp.name} (ID: {historyEmp.id})
+                </p>
+              </div>
+              <button onClick={closeHistoryModal} className="text-white hover:text-gray-200 transition">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {historyLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Stats Cards */}
+                  {empHistoryStats && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                        <div className="text-xs text-red-700 font-medium">Sick Leave</div>
+                        <div className="text-lg font-bold text-red-900 mt-1">
+                          {empHistoryStats.sick_leave?.used || 0} / {empHistoryStats.sick_leave?.total || 8}
+                        </div>
+                        <div className="text-[10px] text-red-600">Rem: {empHistoryStats.sick_leave?.remaining || 0} days</div>
+                      </div>
+
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <div className="text-xs text-green-700 font-medium">Emergency Leave</div>
+                        <div className="text-lg font-bold text-green-900 mt-1">
+                          {empHistoryStats.emergency_leave?.used || 0} / {empHistoryStats.emergency_leave?.total || 8}
+                        </div>
+                        <div className="text-[10px] text-green-600">Rem: {empHistoryStats.emergency_leave?.remaining || 0} days</div>
+                      </div>
+
+                      <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <div className="text-xs text-purple-700 font-medium">Compensatory Off</div>
+                        <div className="text-lg font-bold text-purple-900 mt-1">
+                          {empHistoryStats.Compensatory_leave?.used || 0} / {empHistoryStats.Compensatory_leave?.total || 8}
+                        </div>
+                        <div className="text-[10px] text-purple-600">Rem: {empHistoryStats.Compensatory_leave?.remaining || 0} days</div>
+                      </div>
+
+                      <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                        <div className="text-xs text-orange-700 font-medium">Leave Without Pay</div>
+                        <div className="text-lg font-bold text-orange-900 mt-1">
+                          {empHistoryStats.lwp?.used || 0} days
+                        </div>
+                        <div className="text-[10px] text-orange-600">
+                          {empHistoryStats.lwp?.active ? 'Active LWP' : 'Standard'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* History Logs Table */}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 mb-3">All Leave Requests History</h4>
+                    {empHistoryLogs.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-6 bg-gray-50 rounded-lg">No past leave history for this employee.</p>
+                    ) : (
+                      <div className="overflow-x-auto border rounded-lg border-gray-200">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr className="text-left text-gray-600">
+                              <th className="py-2.5 px-3 font-semibold">Type</th>
+                              <th className="py-2.5 px-3 font-semibold">Duration</th>
+                              <th className="py-2.5 px-3 font-semibold">Days</th>
+                              <th className="py-2.5 px-3 font-semibold">Reason</th>
+                              <th className="py-2.5 px-3 font-semibold">Status</th>
+                              <th className="py-2.5 px-3 font-semibold">Admin Comment</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {empHistoryLogs.map((item) => (
+                              <tr key={item.id} className="hover:bg-gray-50">
+                                <td className="py-2.5 px-3 font-medium capitalize">{item.leave_type}</td>
+                                <td className="py-2.5 px-3 text-gray-600">
+                                  {new Date(item.start_date).toLocaleDateString()} - {new Date(item.end_date).toLocaleDateString()}
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold">{item.days_count || 1}d</td>
+                                <td className="py-2.5 px-3 max-w-xs truncate text-gray-600">{item.reason}</td>
+                                <td className="py-2.5 px-3">{getStatusBadge(item.status)}</td>
+                                <td className="py-2.5 px-3 text-gray-500 italic">{item.admin_comment || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-3 rounded-b-xl border-t flex justify-end">
+              <button onClick={closeHistoryModal} className="btn-secondary text-xs">
+                Close
+              </button>
             </div>
           </div>
         </div>

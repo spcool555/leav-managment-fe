@@ -27,6 +27,13 @@ export default defineConfig({
       '127.0.0.1',
       '.trycloudflare.com'
     ],
+    proxy: {
+      '/keltron-api': {
+        target: 'http://localhost:50001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/keltron-api/, '/api'),
+      },
+    },
   },
 })
 

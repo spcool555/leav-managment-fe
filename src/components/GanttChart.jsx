@@ -333,20 +333,24 @@ const GanttChart = ({ junctions = [] }) => {
                             cellClass += ` ${isCompleted ? theme.barBg : theme.barBgLight}`;
                           }
 
+                          let tooltipText = `${visit.junction_name}\nType: ${visit.visit_type || 'Regular Visit'}\nStatus: ${visit.status === 'completed' ? 'Completed' : visit.status === 'unresolved' ? 'Unresolved' : 'Open'}\nStart: ${visit.startDate.toLocaleDateString()}\nEnd: ${isCompleted ? visit.endDate.toLocaleDateString() : 'Ongoing'}`;
+                          
+                          if (visit.call_visits && visit.call_visits.length > 0) {
+                            tooltipText += `\n\nCall Visits (${visit.call_visits.length}):`;
+                            visit.call_visits.forEach((cv, idx) => {
+                              const cvDate = cv.started_at && !isNaN(new Date(cv.started_at).getTime()) ? new Date(cv.started_at).toLocaleDateString() : '—';
+                              tooltipText += `\n- Attempt #${idx + 1}: ${cv.status === 'completed' ? 'Completed' : 'Unresolved'} (${cvDate})`;
+                            });
+                          }
+
                           return (
                             <td 
                               key={dayIdx} 
                               className={`w-8 min-w-[32px] ${cellClass} transition-colors relative group`}
+                              title={isActive ? tooltipText : undefined}
                             >
                               {isActive && (
                                 <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 bg-black/10 flex items-center justify-center cursor-default">
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 bg-gray-900 text-white rounded p-2 shadow-lg hidden group-hover:block w-48 text-[11px] font-normal leading-normal whitespace-normal">
-                                    <strong className="block mb-1">{visit.junction_name}</strong>
-                                    <div><strong>Type:</strong> {visit.visit_type || 'Regular Visit'}</div>
-                                    <div><strong>Status:</strong> {visit.status}</div>
-                                    <div><strong>Start:</strong> {visit.startDate.toLocaleDateString()}</div>
-                                    <div><strong>End:</strong> {isCompleted ? visit.endDate.toLocaleDateString() : 'Ongoing'}</div>
-                                  </div>
                                 </div>
                               )}
                             </td>

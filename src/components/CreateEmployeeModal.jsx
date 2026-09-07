@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, Lock, UserPlus } from 'lucide-react';
+import { X, User, Mail, Phone, Lock, UserPlus, Briefcase, Layers } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,8 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
     email: '',
     phone: '',
     password: '',
+    designation: '',
+    category: '',
     is_admin: false,
     shift_type: 'general',
     weekly_off: ''
@@ -35,7 +37,7 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.id || !formData.full_name || !formData.email || !formData.phone || !formData.password) {
+    if (!formData.id || !formData.full_name || !formData.email || !formData.phone || !formData.password || !formData.designation || !formData.category) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -79,6 +81,8 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
       email: '',
       phone: '',
       password: '',
+      designation: '',
+      category: '',
       is_admin: false,
       shift_type: 'general',
       weekly_off: ''
@@ -227,6 +231,65 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
             </div>
           </div>
 
+          {/* Team (Designation) */}
+          <div>
+            <label htmlFor="designation" className="block text-sm font-medium text-gray-700 mb-1">
+              Team *
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Briefcase className="h-4 w-4 text-gray-400" />
+              </div>
+              <select
+                id="designation"
+                name="designation"
+                value={formData.designation}
+                onChange={handleChange}
+                className="input-field-with-icon appearance-none bg-white pr-10"
+                required
+              >
+                <option value="">Select Team</option>
+                <option value="Field Team">Field Team</option>
+                <option value="COC">COC</option>
+                <option value="CCC">CCC</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              Category *
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Layers className="h-4 w-4 text-gray-400" />
+              </div>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input-field-with-icon appearance-none bg-white pr-10"
+                required
+              >
+                <option value="">Select Category</option>
+                <option value="Smart City">Smart City</option>
+                <option value="IITMS">IITMS</option>
+                <option value="Construction">Construction</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+          </div>
 
           {/* Admin Checkbox */}
           <div className="flex items-center">

@@ -1,8 +1,9 @@
 import axios from 'axios';
 //import { API_BASE_URL } from "../services/api";
 
-const API_BASE_URL ='https://dmmsl.in/api';
-// const API_BASE_URL ='http://127.0.0.1:5001/api';
+const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+  ? 'http://127.0.0.1:5001/api'
+  : 'https://dmmsl.in/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ArrowLeft, Globe } from 'lucide-react';
+import { LogOut, ArrowLeft, Globe, Home, Wrench, Monitor } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import logoImage from '../assets/KELTRON.png';
+import IIMSOverlay from './IIMSOverlay';
 
 const Header = ({
   title,
@@ -21,6 +22,7 @@ const Header = ({
   // ✅ STATES
   const [language, setLanguage] = useState('en');
   const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [showIIMS, setShowIIMS] = useState(false);
 
   // ✅ LOAD SAVED LANGUAGE
   useEffect(() => {
@@ -52,7 +54,9 @@ const Header = ({
   };
 
   return (
-    <header className={className}>
+    <>
+      {showIIMS && <IIMSOverlay onClose={() => setShowIIMS(false)} />}
+      <header className={className}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
 
@@ -73,9 +77,7 @@ const Header = ({
               onClick={handleLogoClick}
             >
               <img src={logoImage} alt="Keltron Logo" className="h-8 sm:h-12 md:h-14 max-w-[40vw] sm:max-w-xs w-auto mr-3 object-contain" />
-              <h1 className="text-lg font-semibold text-gray-900">
-                {title && <span className="ml-2 text-gray-600">{title}</span>}
-              </h1>
+              {title && <h1 className="text-lg font-semibold text-gray-900 ml-2 text-gray-600">{title}</h1>}
             </div>
           </div>
 
@@ -118,6 +120,18 @@ const Header = ({
                 )}
               </div>
 
+              {/* ✅ INVENTORY BUTTON */}
+              <div>
+                <button
+                  onClick={() => setShowIIMS(true)}
+                  style={{ backgroundColor: '#97D3CD', color: '#0d4039' }}
+                  className="flex items-center gap-2 hover:opacity-90 px-4 py-1.5 rounded-md text-sm font-bold shadow transition-opacity"
+                >
+                  <Monitor className="h-5 w-5" />
+                  <span>Inventory</span>
+                </button>
+              </div>
+
               {showUserInfo && (
                 <span className="text-sm text-gray-700">
                  Welcome, <span className="font-bold">{user.full_name}</span>
@@ -150,6 +164,7 @@ const Header = ({
         </div>
       </div>
     </header>
+    </>
   );
 };
 

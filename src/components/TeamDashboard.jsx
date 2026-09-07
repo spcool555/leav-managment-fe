@@ -36,6 +36,16 @@ const TeamDashboard = ({ team, userCategory }) => {
     return dateStr;
   };
 
+  const formatUITime = (timeStr) => {
+    if (!timeStr || timeStr === '—' || timeStr === 'None') return '—';
+    try {
+      const d = new Date(timeStr);
+      return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch {
+      return '—';
+    }
+  };
+
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [summary, setSummary] = useState(null);
   const [members, setMembers] = useState([]);
@@ -43,8 +53,14 @@ const TeamDashboard = ({ team, userCategory }) => {
   const [remarks, setRemarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [junctionCurrentPage, setJunctionCurrentPage] = useState(1);
+  const junctionsPerPage = 10;
 
-  const showsJunctions = team === 'field' || team === 'coc';
+  useEffect(() => {
+    setJunctionCurrentPage(1);
+  }, [team, selectedDate]);
+
+  const showsJunctions = team === 'field';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,6 +88,29 @@ const TeamDashboard = ({ team, userCategory }) => {
       setLoading(false);
     }
   }, [team, showsJunctions, selectedDate, userCategory]);
+
+  useEffect(() => {
+    setJunctionCurrentPage(1);
+    setRosterFilter('checked_in');
+  }, [team, selectedDate]);
+
+  const [rosterFilter, setRosterFilter] = useState('checked_in'); // 'all' | 'checked_in' | 'absent' | 'active_visits'
+
+  const filteredMembers = React.useMemo(() => {
+    if (rosterFilter === 'checked_in') {
+      return members.filter(m => m.checked_in_today);
+    }
+    if (rosterFilter === 'absent') {
+      return members.filter(m => !m.checked_in_today);
+    }
+    if (rosterFilter === 'active_visits') {
+      const activeEmployeeIds = new Set(
+        junctions.map(j => j.employee_id)
+      );
+      return members.filter(m => activeEmployeeIds.has(m.id));
+    }
+    return members;
+  }, [members, rosterFilter, junctions]);
 
   useEffect(() => {
     load();
@@ -175,6 +214,7 @@ const TeamDashboard = ({ team, userCategory }) => {
   };
 
   const applyJunctionFilters = async () => {
+    setJunctionCurrentPage(1);
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -316,6 +356,12 @@ const TeamDashboard = ({ team, userCategory }) => {
     e.target.value = '';
   };
 
+  const totalJunctionItems = junctions.length;
+  const totalJunctionPages = Math.ceil(totalJunctionItems / junctionsPerPage);
+  const junctionStartIndex = (junctionCurrentPage - 1) * junctionsPerPage;
+  const junctionEndIndex = junctionStartIndex + junctionsPerPage;
+  const paginatedJunctions = junctions.slice(junctionStartIndex, junctionEndIndex);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -353,7 +399,7 @@ const TeamDashboard = ({ team, userCategory }) => {
               className="btn-primary flex items-center justify-center space-x-2 px-4 py-2 cursor-pointer bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm font-medium text-sm transition-colors"
             >
               <Upload className="h-4 w-4" />
-              <span>Upload Junctions (Excel)</span>
+              <span>Upload Junctions, Wards & Zones (Excel)</span>
             </label>
             <button
               onClick={handleDownloadJunctionSample}
@@ -394,32 +440,52 @@ const TeamDashboard = ({ team, userCategory }) => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="md-card flex items-center gap-3">
+        <div 
+          onClick={() => setRosterFilter('all')}
+          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
+            rosterFilter === 'all' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
+          }`}
+        >
           <div className="p-3 rounded-full bg-primary-100"><Users className="h-5 w-5 text-primary-700" /></div>
           <div>
-            <div className="text-xs text-gray-500">Total Members</div>
+            <div className="text-xs text-gray-500 font-semibold">Total Members</div>
             <div className="text-xl font-bold text-gray-900">{summary?.total_members ?? 0}</div>
           </div>
         </div>
-        <div className="md-card flex items-center gap-3">
+        <div 
+          onClick={() => setRosterFilter('checked_in')}
+          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
+            rosterFilter === 'checked_in' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
+          }`}
+        >
           <div className="p-3 rounded-full bg-green-100"><UserCheck className="h-5 w-5 text-green-700" /></div>
           <div>
-            <div className="text-xs text-gray-500">Checked In Today</div>
+            <div className="text-xs text-gray-500 font-semibold">Checked In Today</div>
             <div className="text-xl font-bold text-gray-900">{summary?.checked_in_today ?? 0}</div>
           </div>
         </div>
-        <div className="md-card flex items-center gap-3">
+        <div 
+          onClick={() => setRosterFilter('absent')}
+          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
+            rosterFilter === 'absent' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
+          }`}
+        >
           <div className="p-3 rounded-full bg-red-100"><UserX className="h-5 w-5 text-red-700" /></div>
           <div>
-            <div className="text-xs text-gray-500">Absent Today</div>
+            <div className="text-xs text-gray-500 font-semibold">Absent Today</div>
             <div className="text-xl font-bold text-gray-900">{summary?.absent_today ?? 0}</div>
           </div>
         </div>
         {showsJunctions && (
-          <div className="md-card flex items-center gap-3">
+          <div 
+            onClick={() => setRosterFilter('active_visits')}
+            className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
+              rosterFilter === 'active_visits' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
+            }`}
+          >
             <div className="p-3 rounded-full bg-amber-100"><MapPinned className="h-5 w-5 text-amber-700" /></div>
             <div>
-              <div className="text-xs text-gray-500">Active Junction Visits</div>
+              <div className="text-xs text-gray-500 font-semibold">Active Junction Visits</div>
               <div className="text-xl font-bold text-gray-900">{summary?.active_junctions ?? 0}</div>
             </div>
           </div>
@@ -428,7 +494,14 @@ const TeamDashboard = ({ team, userCategory }) => {
 
       {/* Roster */}
       <div className="md-card overflow-x-auto">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Roster — Today's Attendance</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Team Roster — Today's Attendance{' '}
+          <span className="text-sm font-normal text-gray-500 ml-2 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+            {rosterFilter === 'all' ? 'All Members' : 
+             rosterFilter === 'checked_in' ? 'Checked In Today' : 
+             rosterFilter === 'absent' ? 'Absent Today' : 'Active Junction Visits'}
+          </span>
+        </h3>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left text-gray-500 border-b border-gray-200">
@@ -441,8 +514,8 @@ const TeamDashboard = ({ team, userCategory }) => {
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => (
-              <tr key={m.id} className="border-b border-gray-100">
+            {filteredMembers.map((m) => (
+              <tr key={m.id} className="border-b border-gray-100 hover:bg-gray-50/30">
                 <td className="py-2 pr-4 font-medium text-gray-900">{m.id}</td>
                 <td className="py-2 pr-4">{m.full_name}</td>
                 <td className="py-2 pr-4 text-gray-600">{m.designation || '—'}</td>
@@ -451,12 +524,16 @@ const TeamDashboard = ({ team, userCategory }) => {
                     {m.checked_in_today ? (m.status || 'present') : 'absent'}
                   </span>
                 </td>
-                <td className="py-2 pr-4">{m.check_in_time ? new Date(m.check_in_time).toLocaleTimeString() : '—'}</td>
-                <td className="py-2 pr-4">{m.check_out_time ? new Date(m.check_out_time).toLocaleTimeString() : '—'}</td>
+                <td className="py-2 pr-4">{formatUITime(m.check_in_time)}</td>
+                <td className="py-2 pr-4">{formatUITime(m.check_out_time)}</td>
               </tr>
             ))}
-            {members.length === 0 && (
-              <tr><td colSpan={6} className="py-6 text-center text-gray-500">No employees mapped to this team yet.</td></tr>
+            {filteredMembers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-gray-500 font-medium">
+                  No employees match the selected filter.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -544,7 +621,7 @@ const TeamDashboard = ({ team, userCategory }) => {
                 </tr>
               </thead>
               <tbody>
-                {junctions.map((j) => {
+                {paginatedJunctions.map((j) => {
                    const startedAtDate = j.started_at ? new Date(j.started_at) : null;
                    const now = new Date();
                    const diffDays = startedAtDate ? (now - startedAtDate) / (1000 * 60 * 60 * 24) : 0;
@@ -578,6 +655,57 @@ const TeamDashboard = ({ team, userCategory }) => {
                             {j.fault_type && <span>Fault: <strong className="text-red-700">{j.fault_type}</strong></span>}
                           </div>
                         )}
+                        {j.call_visits && j.call_visits.length > 0 && (
+                          <div className="mt-3 pl-3 border-l-2 border-blue-400 space-y-2">
+                            <div className="text-[10px] font-bold text-blue-800 uppercase tracking-wider">Call Visit Logs ({j.call_visits.length})</div>
+                            {j.call_visits.map((cv, idx) => (
+                              <div key={cv.id} className="text-[11px] bg-blue-50/50 p-2 rounded border border-blue-100/50 space-y-1">
+                                <div className="flex justify-between items-center text-[9px] text-gray-500 font-semibold">
+                                  <span>Attempt #{idx + 1} ({cv.status === 'completed' ? 'Completed' : 'Unresolved'})</span>
+                                  <span>{cv.started_at && !isNaN(new Date(cv.started_at).getTime()) ? new Date(cv.started_at).toLocaleString() : '—'}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <span className="font-semibold text-gray-500 text-[9px] block">Before Photo & Loc:</span>
+                                    <div className="flex gap-1.5 items-center mt-0.5">
+                                      {cv.before_photo ? (
+                                        <button onClick={() => viewImage(cv.before_photo)} className="text-primary-600 hover:underline flex items-center gap-0.5 text-[9px]">
+                                          <Eye className="h-2.5 w-2.5" /> Photo
+                                        </button>
+                                      ) : <span className="text-[9px] text-gray-400">No Photo</span>}
+                                      {cv.before_location && (
+                                        <button onClick={() => openInMaps(cv.before_location)} className="text-primary-600 hover:underline text-[9px]">
+                                          Map
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold text-gray-500 text-[9px] block">After Photo & Loc:</span>
+                                    <div className="flex gap-1.5 items-center mt-0.5">
+                                      {cv.after_photo ? (
+                                        <button onClick={() => viewImage(cv.after_photo)} className="text-primary-600 hover:underline flex items-center gap-0.5 text-[9px]">
+                                          <Eye className="h-2.5 w-2.5" /> Photo
+                                        </button>
+                                      ) : <span className="text-[9px] text-gray-400">No Photo</span>}
+                                      {cv.after_location && (
+                                        <button onClick={() => openInMaps(cv.after_location)} className="text-primary-600 hover:underline text-[9px]">
+                                          Map
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {(cv.before_remark || cv.remark) && (
+                                  <div className="text-[9px] text-gray-700 bg-white p-1.5 rounded mt-1 border border-gray-100">
+                                    {cv.before_remark && <div><strong>Before:</strong> {cv.before_remark}</div>}
+                                    {cv.remark && <div><strong>After:</strong> {cv.remark}</div>}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 pr-4 text-gray-600 font-medium">{j.ward || '—'}</td>
                       <td className="py-2 pr-4 text-gray-600 font-medium">{j.zone || '—'}</td>
@@ -608,8 +736,20 @@ const TeamDashboard = ({ team, userCategory }) => {
                           ) : '—'}
                         </div>
                       </td>
-                      <td className="py-2 pr-4 text-xs">
-                        {j.remark ? <span className="italic text-gray-700">{j.remark}</span> : <span className="text-gray-400">—</span>}
+                      <td className="py-2 pr-4 text-xs space-y-1">
+                        {j.before_remark && (
+                          <div>
+                            <span className="font-semibold text-gray-500">Before:</span>{' '}
+                            <span className="italic text-gray-700">{j.before_remark}</span>
+                          </div>
+                        )}
+                        {j.remark && (
+                          <div>
+                            <span className="font-semibold text-gray-500">After:</span>{' '}
+                            <span className="italic text-gray-700">{j.remark}</span>
+                          </div>
+                        )}
+                        {!j.before_remark && !j.remark && <span className="text-gray-400">—</span>}
                       </td>
                       <td className="py-2 pr-4">
                         <span className={`md-chip ${
@@ -623,106 +763,74 @@ const TeamDashboard = ({ team, userCategory }) => {
                   )
                 })}
                 {junctions.length === 0 && (
-                  <tr><td colSpan={6} className="py-6 text-center text-gray-500">No junction visits logged today.</td></tr>
+                  <tr><td colSpan={9} className="py-6 text-center text-gray-500">No junction visits logged today.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Junction Remarks & Issue Messages Log */}
-          <div className="md-card overflow-x-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Junction Remarks & Issue Messages Log</h3>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <select
-                  value={remarksFilterEmp}
-                  onChange={(e) => setRemarksFilterEmp(e.target.value)}
-                  className="input-field text-xs py-1.5 px-2"
-                >
-                  <option value="">All Employees</option>
-                  {members.map(m => (
-                    <option key={m.id} value={m.id}>{m.id} - {m.full_name}</option>
-                  ))}
-                </select>
-
-                <select
-                  onChange={handleRemarksMonthChange}
-                  className="input-field text-xs py-1.5 px-2"
-                  defaultValue=""
-                >
-                  <option value="" disabled>Select Month...</option>
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const d = new Date();
-                    d.setMonth(d.getMonth() - i);
-                    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-                    return <option key={val} value={val}>{label}</option>;
-                  })}
-                </select>
-
-                <input
-                  type="date"
-                  value={remarksStartDate}
-                  onChange={(e) => setRemarksStartDate(e.target.value)}
-                  className="input-field text-xs py-1.5 px-2"
-                />
-
-                <input
-                  type="date"
-                  value={remarksEndDate}
-                  onChange={(e) => setRemarksEndDate(e.target.value)}
-                  className="input-field text-xs py-1.5 px-2"
-                />
-
+          {/* Junction Visits Pagination Controls */}
+          {totalJunctionPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+              <div className="flex flex-1 justify-between sm:hidden">
                 <button
-                  onClick={applyRemarksFilters}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+                  onClick={() => setJunctionCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={junctionCurrentPage === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Apply
+                  Previous
+                </button>
+                <button
+                  onClick={() => setJunctionCurrentPage(prev => Math.min(prev + 1, totalJunctionPages))}
+                  disabled={junctionCurrentPage === totalJunctionPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
                 </button>
               </div>
-
-              <button
-                onClick={handleExportRemarksExcel}
-                className="btn-primary flex items-center justify-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-medium text-xs transition-colors shrink-0"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Export Remarks (Excel)</span>
-              </button>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{junctionStartIndex + 1}</span> to <span className="font-medium">{Math.min(junctionEndIndex, totalJunctionItems)}</span> of{' '}
+                    <span className="font-medium">{totalJunctionItems}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => setJunctionCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={junctionCurrentPage === 1}
+                      className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: totalJunctionPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setJunctionCurrentPage(page)}
+                        className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                          junctionCurrentPage === page
+                            ? 'z-10 bg-green-50 border-green-500 text-green-700 font-semibold'
+                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setJunctionCurrentPage(prev => Math.min(prev + 1, totalJunctionPages))}
+                      disabled={junctionCurrentPage === totalJunctionPages}
+                      className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="py-2 pr-4">Time (IST)</th>
-                  <th className="py-2 pr-4">Employee</th>
-                  <th className="py-2 pr-4">Junction Name</th>
-                  <th className="py-2 pr-4">Remark / Issue Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                {remarks.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-2 pr-4 text-xs text-gray-500">
-                      {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <div className="font-semibold text-gray-900">{r.employee_name}</div>
-                      <div className="text-xs text-gray-500">{r.employee_id}</div>
-                    </td>
-                    <td className="py-2 pr-4 font-semibold text-gray-800">{r.junction_name}</td>
-                    <td className="py-2 pr-4 italic text-gray-700">{r.remark}</td>
-                  </tr>
-                ))}
-                {remarks.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-gray-500">
-                      No remarks/issue messages logged for this date.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          )}
+
+
 
         </div>
       )}

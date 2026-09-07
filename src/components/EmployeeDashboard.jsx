@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, User, Camera, MapPin, Calendar, FileText } from 'lucide-react';
+import { Clock, User, Camera, MapPin, Calendar, FileText, ExternalLink, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import LeaveRequestModal from './LeaveRequestModal';
@@ -243,7 +243,7 @@ const EmployeeDashboard = () => {
 
   // ---------------- UI ----------------
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex-1 bg-gray-50">
       {/* Header */}
       <Header title="Employee Portal" />
 
@@ -594,6 +594,31 @@ const EmployeeDashboard = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Purchase Requisition Form */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 mt-8 border border-gray-100 transition-all duration-300 hover:shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-teal-600 rounded-full inline-block"></span>
+                Purchase Requisition Form
+              </h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Fill out the Purchase Requisition Form to request required items, materials, or equipment.
+              </p>
+            </div>
+
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLScA46TdHzcB4yXTBKl01seU8iCWGqfCGRYdelc8zYU7RhuhoQ/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 shrink-0 text-sm"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span>Fill Purchase Request Form</span>
+            </a>
           </div>
         </div>
 

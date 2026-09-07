@@ -125,9 +125,20 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
   const [locationList, setLocationList] = useState([]);
   const [facingMode, setFacingMode] = useState('environment');
 
-  const [locationName, setLocationName] = useState('');
-  const [wardText, setWardText] = useState('');
-  const [zoneText, setZoneText] = useState('');
+  const [activeRow, setActiveRow] = useState('row1');
+  const [r1Junction, setR1Junction] = useState('');
+  const [r1Ward, setR1Ward] = useState('');
+  const [r1Zone, setR1Zone] = useState('');
+
+  const [r2Ward, setR2Ward] = useState('');
+  const [r2Zone, setR2Zone] = useState('');
+
+  const [r3Zone, setR3Zone] = useState('');
+
+  const [showJunctionDropdown, setShowJunctionDropdown] = useState(false);
+  const [showWardDropdown, setShowWardDropdown] = useState(false);
+  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
+
   const [visitType, setVisitType] = useState('Regular Visit');
   const [remarkText, setRemarkText] = useState('');
   const [selectedAsset, setSelectedAsset] = useState('');
@@ -140,22 +151,116 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-
-
   const webcamRef = useRef(null);
 
-  const handleLocationNameChange = (val) => {
-    setLocationName(val);
+  const availableZonesAll = React.useMemo(() => {
+    const set = new Set();
+    locationList.forEach((loc) => {
+      if (loc.zone && loc.zone.trim()) set.add(loc.zone.trim());
+    });
+    return Array.from(set).sort();
+  }, [locationList]);
+
+  const availableWardsAll = React.useMemo(() => {
+    const set = new Set();
+    locationList.forEach((loc) => {
+      if (loc.ward && loc.ward.trim()) set.add(loc.ward.trim());
+    });
+    return Array.from(set).sort();
+  }, [locationList]);
+
+  const filteredJunctions = React.useMemo(() => {
+    if (!r1Junction) return locationList.slice(0, 60);
+    const query = r1Junction.toLowerCase().trim();
+    return locationList.filter((loc) => 
+      loc.name.toLowerCase().includes(query) ||
+      (loc.ward && loc.ward.toLowerCase().includes(query)) ||
+      (loc.zone && loc.zone.toLowerCase().includes(query))
+    ).slice(0, 60);
+  }, [locationList, r1Junction]);
+
+  const filteredWards = React.useMemo(() => {
+    if (!r2Ward) return availableWardsAll.slice(0, 60);
+    const query = r2Ward.toLowerCase().trim();
+    return availableWardsAll.filter((w) => w.toLowerCase().includes(query)).slice(0, 60);
+  }, [availableWardsAll, r2Ward]);
+
+  const filteredZones = React.useMemo(() => {
+    if (!r3Zone) return availableZonesAll.slice(0, 60);
+    const query = r3Zone.toLowerCase().trim();
+    return availableZonesAll.filter((z) => z.toLowerCase().includes(query)).slice(0, 60);
+  }, [availableZonesAll, r3Zone]);
+
+  const handleRow1JunctionChange = (val) => {
+    setActiveRow('row1');
+    setR1Junction(val);
     const matched = locationList.find(
       (loc) => loc.name.toLowerCase() === val.toLowerCase().trim()
     );
     if (matched) {
-      setWardText(matched.ward || '');
-      setZoneText(matched.zone || '');
+      let wardVal = matched.ward || '';
+      let zoneVal = matched.zone || '';
+
+      // Fallback: If ward is empty but zone is present, search locationList for sibling ward in same zone
+      if (!wardVal && zoneVal) {
+        const sibling = locationList.find(
+          (loc) => loc.zone === zoneVal && loc.ward && loc.ward.trim()
+        );
+        if (sibling) {
+          wardVal = sibling.ward;
+        }
+      }
+
+      setR1Ward(wardVal);
+      setR1Zone(zoneVal);
     } else {
-      setWardText('');
-      setZoneText('');
+      setR1Ward('');
+      setR1Zone('');
     }
+    setR2Ward('');
+    setR2Zone('');
+    setR3Zone('');
+  };
+
+  const handleRow2WardChange = (val) => {
+    setActiveRow('row2');
+    setR2Ward(val);
+    const trimmedVal = val.toLowerCase().trim();
+    if (!trimmedVal) {
+      setR2Zone('');
+      return;
+    }
+    const matchedLoc = locationList.find(
+      (loc) => loc.ward && loc.ward.toLowerCase() === trimmedVal
+    );
+    if (matchedLoc && matchedLoc.zone) {
+      setR2Zone(matchedLoc.zone);
+    } else {
+      setR2Zone('');
+    }
+    setR1Junction('');
+    setR1Ward('');
+    setR1Zone('');
+    setR3Zone('');
+  };
+
+  const handleRow3ZoneChange = (val) => {
+    setActiveRow('row3');
+    setR3Zone(val);
+    setR1Junction('');
+    setR1Ward('');
+    setR1Zone('');
+    setR2Ward('');
+    setR2Zone('');
+  };
+
+  const resetLocationSelection = () => {
+    setR1Junction('');
+    setR1Ward('');
+    setR1Zone('');
+    setR2Ward('');
+    setR2Zone('');
+    setR3Zone('');
   };
 
   // Fetch employee team
@@ -233,10 +338,16 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
   };
 
   const beginStart = () => {
-    if (!locationName.trim()) {
-      toast.error(`Enter the ${cfg.locationLabel.toLowerCase()} first`);
+    let targetLoc = '';
+    if (activeRow === 'row1') targetLoc = r1Junction.trim();
+    else if (activeRow === 'row2') targetLoc = r2Ward.trim();
+    else if (activeRow === 'row3') targetLoc = r3Zone.trim();
+
+    if (!targetLoc) {
+      toast.error('Please select an option in the active row first');
       return;
     }
+    setRemarkText('');
     setMode('starting');
     setCapturedImage(null);
     setShowCamera(true);
@@ -255,6 +366,25 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
     }
     setRemarkText('');
     setMode('completing');
+    setCapturedImage(null);
+    setShowCamera(true);
+    getCurrentLocation();
+  };
+
+  const beginCallVisit = (visitId, name) => {
+    setActiveVisitId(visitId);
+    setActiveRow('row1');
+    setR1Junction(name);
+    setMode('starting_call');
+    setCapturedImage(null);
+    setShowCamera(true);
+    getCurrentLocation();
+  };
+
+  const beginCompleteCallVisit = (visitId) => {
+    setActiveVisitId(visitId);
+    setRemarkText('');
+    setMode('completing_call');
     setCapturedImage(null);
     setShowCamera(true);
     getCurrentLocation();
@@ -283,6 +413,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
     setActiveVisitId(null);
     setSelectedAsset('');
     setSelectedFault('');
+    setRemarkText('');
   };
 
   const submit = async () => {
@@ -295,12 +426,12 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
       return;
     }
 
-    if (mode === 'completing' && !remarkText.trim()) {
+    if ((mode === 'completing' || mode === 'completing_call') && !remarkText.trim()) {
       toast.error('Remark is required to complete the visit.');
       return;
     }
 
-    if (team === 'field') {
+    if (team === 'field' && (mode === 'starting' || mode === 'completing')) {
       if (!selectedAsset) {
         toast.error('Asset Type is required');
         return;
@@ -310,7 +441,6 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
         return;
       }
     }
-
     setSubmitting(true);
     try {
       const blobRes = await fetch(capturedImage);
@@ -320,11 +450,30 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
       formData.append('photo', blob, `${user.id}_${Date.now()}.jpg`);
 
       if (mode === 'starting') {
+        let finalJunction = '';
+        let finalWard = '';
+        let finalZone = '';
+
+        if (activeRow === 'row1') {
+          finalJunction = r1Junction.trim();
+          finalWard = r1Ward.trim();
+          finalZone = r1Zone.trim();
+        } else if (activeRow === 'row2') {
+          finalJunction = r2Ward.trim();
+          finalWard = r2Ward.trim();
+          finalZone = r2Zone.trim();
+        } else if (activeRow === 'row3') {
+          finalJunction = r3Zone.trim();
+          finalWard = '';
+          finalZone = r3Zone.trim();
+        }
+
         formData.append('employee_id', user.id);
-        formData.append('junction_name', locationName.trim());
+        formData.append('junction_name', finalJunction);
         formData.append('visit_type', visitType);
-        formData.append('ward', wardText.trim());
-        formData.append('zone', zoneText.trim());
+        formData.append('ward', finalWard);
+        formData.append('zone', finalZone);
+        formData.append('before_remark', remarkText.trim());
         if (team === 'field') {
           formData.append('asset_type', selectedAsset);
           formData.append('fault_type', selectedFault);
@@ -333,10 +482,15 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         toast.success(res.data.message || `${cfg.panelTitle} started`);
-        setLocationName('');
-        setWardText('');
-        setZoneText('');
+        resetLocationSelection();
         setVisitType('Regular Visit');
+      } else if (mode === 'starting_call' && activeVisitId) {
+        formData.append('employee_id', user.id);
+        formData.append('before_remark', remarkText.trim());
+        const res = await api.post(`/junction/${activeVisitId}/call-visit/start`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success(res.data.message || 'Call visit started');
       } else if (mode === 'completing' && activeVisitId) {
         formData.append('remark', remarkText.trim());
         if (team === 'field') {
@@ -347,6 +501,12 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         toast.success(res.data.message || 'Visit completed');
+      } else if (mode === 'completing_call' && activeVisitId) {
+        formData.append('remark', remarkText.trim());
+        const res = await api.post(`/junction/${activeVisitId}/call-visit/complete`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success(res.data.message || 'Call visit completed');
       }
 
       cancelFlow();
@@ -402,9 +562,9 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
         {mode && (
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {mode === 'starting'
-                ? `${cfg.beforeLabel} — ${locationName}`
-                : `${cfg.afterLabel} (Completing Visit)`}
+              {mode === 'starting' || mode === 'starting_call'
+                ? cfg.beforeLabel
+                : cfg.afterLabel}
             </label>
 
             {showCamera && (
@@ -518,8 +678,22 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                   </div>
                 )}
 
+                {/* Before Remark Input */}
+                {(mode === 'starting' || mode === 'starting_call') && (
+                  <div className="text-left mt-4 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Remark (Optional)</label>
+                    <textarea
+                      value={remarkText}
+                      onChange={(e) => setRemarkText(e.target.value)}
+                      placeholder="Enter remarks before starting..."
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      rows="3"
+                    ></textarea>
+                  </div>
+                )}
+
                 {/* Remark Input */}
-                {mode === 'completing' && (
+                {(mode === 'completing' || mode === 'completing_call') && (
                   <div className="text-left mt-4 mb-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Remark (Mandatory)</label>
                     <textarea
@@ -551,7 +725,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                     ) : (
                       <>
                         <CheckCircle2 className="h-5 w-5" />
-                        <span>{mode === 'starting' ? cfg.uploadBefore : cfg.uploadAfter}</span>
+                        <span>{mode === 'starting' || mode === 'starting_call' ? cfg.uploadBefore : cfg.uploadAfter}</span>
                       </>
                     )}
                   </button>
@@ -564,50 +738,190 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
         {/* Start new visit UI */}
         {!mode && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {cfg.locationLabel}
-                </label>
-                <input
-                  type="text"
-                  list={cfg.datalistId}
-                  value={locationName}
-                  onChange={(e) => handleLocationNameChange(e.target.value)}
-                  placeholder={cfg.locationPlaceholder}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                />
-                <datalist id={cfg.datalistId}>
-                  {locationList.map((loc) => (
-                    <option key={loc.id} value={loc.name} />
-                  ))}
-                </datalist>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Select Location Option (Choose any of the 3 rows):
+              </span>
+              {(r1Junction || r2Ward || r3Zone) && (
+                <button
+                  type="button"
+                  onClick={resetLocationSelection}
+                  className="text-xs text-red-600 hover:text-red-800 font-semibold bg-red-50 px-2.5 py-1 rounded border border-red-200"
+                >
+                  Clear Selection ✕
+                </button>
+              )}
+            </div>
+
+            {/* Layout Box 1: Junction -> Ward -> Zone */}
+            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row1' && r1Junction ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                <span>Option 1: Select Junction (Auto-populates Ward & Zone)</span>
+                {activeRow === 'row1' && r1Junction && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ward
-                </label>
-                <input
-                  type="text"
-                  value={wardText}
-                  placeholder="Auto-populated ward..."
-                  readOnly
-                  className="w-full border border-gray-300 bg-gray-100 text-gray-500 rounded-lg px-4 py-3 cursor-not-allowed focus:outline-none"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Junction</label>
+                  <input
+                    type="text"
+                    value={r1Junction}
+                    onFocus={() => { setActiveRow('row1'); setShowJunctionDropdown(true); }}
+                    onBlur={() => { setTimeout(() => setShowJunctionDropdown(false), 200); }}
+                    onChange={(e) => { handleRow1JunctionChange(e.target.value); setShowJunctionDropdown(true); }}
+                    placeholder="Select or type junction..."
+                    className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  {showJunctionDropdown && filteredJunctions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {filteredJunctions.map((loc) => (
+                        <div
+                          key={loc.id || loc.name}
+                          onMouseDown={(e) => { e.preventDefault(); handleRow1JunctionChange(loc.name); setShowJunctionDropdown(false); }}
+                          className="px-4 py-3 hover:bg-green-50/80 cursor-pointer transition-colors"
+                        >
+                          <div className="text-sm font-semibold text-gray-800 break-words">{loc.name}</div>
+                          {(loc.ward || loc.zone) && (
+                            <div className="text-xs text-gray-500 flex flex-wrap items-center gap-1.5 mt-1">
+                              {loc.ward && <span className="bg-green-100/90 text-green-850 px-2 py-0.5 rounded text-[11px] font-medium">Ward: {loc.ward}</span>}
+                              {loc.zone && <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px]">Zone: {loc.zone}</span>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ward</label>
+                  <input
+                    type="text"
+                    value={r1Ward}
+                    placeholder="Auto-populated ward..."
+                    readOnly
+                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input
+                    type="text"
+                    value={r1Zone}
+                    placeholder="Auto-populated zone..."
+                    readOnly
+                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zone
-                </label>
-                <input
-                  type="text"
-                  value={zoneText}
-                  placeholder="Auto-populated zone..."
-                  readOnly
-                  className="w-full border border-gray-300 bg-gray-100 text-gray-500 rounded-lg px-4 py-3 cursor-not-allowed focus:outline-none"
-                />
+            </div>
+
+            {/* Layout Box 2: Ward -> Zone */}
+            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row2' && r2Ward ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                <span>Option 2: Select Ward (Auto-fetches Zone)</span>
+                {activeRow === 'row2' && r2Ward && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ward
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Ward}
+                    onFocus={() => {
+                      setActiveRow('row2');
+                      setShowWardDropdown(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowWardDropdown(false), 200);
+                    }}
+                    onChange={(e) => {
+                      handleRow2WardChange(e.target.value);
+                      setShowWardDropdown(true);
+                    }}
+                    placeholder="Select or type ward..."
+                    className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  {showWardDropdown && filteredWards.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {filteredWards.map((w) => (
+                        <div
+                          key={w}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleRow2WardChange(w);
+                            setShowWardDropdown(false);
+                          }}
+                          className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
+                        >
+                          {w}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    zone
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Zone}
+                    placeholder="Auto-populated zone..."
+                    readOnly
+                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Layout Box 3: Zone */}
+            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row3' && r3Zone ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                <span>Option 3: Select Zone</span>
+                {activeRow === 'row3' && r3Zone && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    zone
+                  </label>
+                  <input
+                    type="text"
+                    value={r3Zone}
+                    onFocus={() => {
+                      setActiveRow('row3');
+                      setShowZoneDropdown(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowZoneDropdown(false), 200);
+                    }}
+                    onChange={(e) => {
+                      handleRow3ZoneChange(e.target.value);
+                      setShowZoneDropdown(true);
+                    }}
+                    placeholder="Select or type zone..."
+                    className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  {showZoneDropdown && filteredZones.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {filteredZones.map((z) => (
+                        <div
+                          key={z}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleRow3ZoneChange(z);
+                            setShowZoneDropdown(false);
+                          }}
+                          className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
+                        >
+                          {z}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -726,7 +1040,21 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                           </div>
                         )}
                         {isOverdue && <div className="text-xs text-red-600 mt-1 font-bold">⚠️ OVERDUE - Not completed!</div>}
+                        {v.before_remark && <div className="text-xs text-gray-700 mt-2 italic bg-white p-2 rounded border border-gray-100">Before Remark: {v.before_remark}</div>}
                         {v.remark && <div className="text-xs text-gray-700 mt-2 italic bg-white p-2 rounded">Remark: {v.remark}</div>}
+                        {v.active_call_visit && (
+                          <div className="text-xs text-blue-600 mt-1.5 font-semibold flex flex-col gap-1 bg-blue-50 border border-blue-100 p-2 rounded">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 animate-pulse" />
+                              <span>Call Visit Started: {v.active_call_visit.started_at ? new Date(v.active_call_visit.started_at).toLocaleString() : '—'}</span>
+                            </div>
+                            {v.active_call_visit.before_remark && (
+                              <div className="text-gray-700 italic font-normal mt-1 border-t border-blue-200/50 pt-1">
+                                Call Before Remark: {v.active_call_visit.before_remark}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex flex-col items-end gap-2">
@@ -745,6 +1073,26 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Complete</span>
+                          </button>
+                        )}
+
+                        {!mode && v.status === 'unresolved' && (
+                          <button
+                            onClick={() => beginCallVisit(v.id, v.junction_name)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-md flex items-center space-x-1 transition-colors shadow-sm"
+                          >
+                            <PlayCircle className="w-3 h-3" />
+                            <span>Call Visit</span>
+                          </button>
+                        )}
+
+                        {!mode && v.status === 'unresolved' && v.active_call_visit && (
+                          <button
+                            onClick={() => beginCompleteCallVisit(v.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded-md flex items-center space-x-1 transition-colors shadow-sm"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Complete Call</span>
                           </button>
                         )}
                       </div>
