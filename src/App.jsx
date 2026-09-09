@@ -8,7 +8,6 @@ import PreDashboard from './components/PreDashboard';
 import AttendanceForm from './components/AttendanceForm';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from "./components/Header";
-import Footer from "./components/Footer";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false, employeeOnly = false }) => {
@@ -44,7 +43,6 @@ const ProtectedRoute = ({ children, adminOnly = false, employeeOnly = false }) =
 // Login Route Component - redirects authenticated users
 const LoginRoute = () => {
   const { user, isAuthenticated, loading } = useAuth();
-  console.log(user)
   
   // Show loading spinner while checking authentication
   if (loading) {
@@ -66,7 +64,7 @@ const LoginRoute = () => {
 
 // Root Route Component - redirects based on authentication
 const RootRoute = () => {
-  const { user, isAuthenticated, loading } = useAuth(user);
+  const { user, isAuthenticated, loading } = useAuth();
   
   // Show loading spinner while checking authentication
   if (loading) {
@@ -89,46 +87,43 @@ const RootRoute = () => {
 const AppRoutes = () => {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
-        <div className="flex-grow flex flex-col">
-          <Routes>
-            <Route path="/login" element={<LoginRoute />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute employeeOnly={true}>
-                  <EmployeeDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/attendance" 
-              element={
-                <ProtectedRoute employeeOnly={true}>
-                  <AttendanceForm />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/predashboard"
-              element={
-                <ProtectedRoute>
-                  <PreDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<RootRoute />} />
-          </Routes>
-        </div>
-        <Footer />
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          <Route path="/login" element={<LoginRoute />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute employeeOnly={true}>
+                <EmployeeDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/attendance" 
+            element={
+              <ProtectedRoute employeeOnly={true}>
+                <AttendanceForm />
+              </ProtectedRoute>
+            } 
+          />
+          <Route
+            path="/predashboard"
+            element={
+              <ProtectedRoute>
+                <PreDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<RootRoute />} />
+        </Routes>
         <Toaster 
           position="top-right"
           toastOptions={{

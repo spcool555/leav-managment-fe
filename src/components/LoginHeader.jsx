@@ -1,4 +1,3 @@
-import React from 'react';
 import logoImage from '../assets/KELTRON.png';
 
 const LoginHeader = ({ title = "Employee Portal", subtitle = "Sign in to your account" }) => {

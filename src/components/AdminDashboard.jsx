@@ -1,32 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  Users, 
   Clock, 
   Download, 
   Filter, 
   Plus, 
-  Calendar,
-  TrendingUp,
   UserCheck,
   UserX,
   AlertCircle,
   Camera,
-  Eye,
   X,
   Upload,
-  MapPin,
   FileSpreadsheet,
-  Trash2,
-  Building2,
   Home,
   Wrench,
-  Monitor
+  Monitor,
+  MapPin
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { Info } from 'lucide-react';
-import AssignEmployeesModal from './AssignEmployeesModal';
-import UploadInfoModal from './UploadInfoModal';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useAuth } from '../context/AuthContext';
+
 import Header from './Header';
 import AddJunctionModal from './AddJunctionModal';
 import CreateEmployeeModal from './CreateEmployeeModal';
@@ -40,19 +32,14 @@ import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
-  const isAdmin = !!user?.is_admin;
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({});
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [employees, setEmployees] = useState([]);
-  const [selectedLocation, setSelectedLocation] = useState(null);
   // New state for junction modal
   const [junctionModal, setJunctionModal] = useState({ open: false, locationId: null, team: null });
-
-  // Existing assign modal open flag (for AssignEmployeesModal) remains
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
 
   // ... (rest of the file unchanged up to location list)
 
@@ -79,46 +66,10 @@ const AdminDashboard = () => {
   const [announcement, setAnnouncement] = useState("");
   const [announcements, setAnnouncements] = useState([]);
 
-  // ── Excel Upload State (per team) ────────────────────────────────────────
-  const [uploadState, setUploadState] = useState({
-    field: { loading: false, message: '', error: '', file: null, locations: [] },
-    coc:   { loading: false, message: '', error: '', file: null, locations: [] },
-    ccc:   { loading: false, message: '', error: '', file: null, locations: [] },
-  });
-  const fileRefs = {
-    field: useRef(null),
-    coc:   useRef(null),
-    ccc:   useRef(null),
-  };
-  
+
   useEffect(() => {
     fetchData();
   }, []);
-
-  // Fetch saved locations for all teams (for display in admin)
-  useEffect(() => {
-    ['field', 'coc', 'ccc'].forEach(team => fetchTeamLocations(team));
-  }, []);
-
-  const fetchTeamLocations = async (team) => {
-    try {
-      const res = await api.get(`/admin/locations/${team}`);
-      setUploadState(prev => ({
-        ...prev,
-        [team]: { ...prev[team], locations: Array.isArray(res.data) ? res.data : [] }
-      }));
-    } catch (err) {
-      // Non-critical — don't show toast
-      console.error(`Failed to fetch ${team} locations`, err);
-    }
-  };
-
-  const handleFileSelect = (team, file) => {
-    setUploadState(prev => ({
-      ...prev,
-      [team]: { ...prev[team], file, message: '', error: '' }
-    }));
-  };
 
   const handleEmployeeUpload = async (e) => {
     const file = e.target.files[0];
@@ -155,56 +106,44 @@ const AdminDashboard = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to download employee sample file');
     }
   };
 
-  const handleUploadLocations = async (team) => {
-    const state = uploadState[team];
-    if (!state.file) {
-      toast.error(`Please select an Excel file for ${team.toUpperCase()} team`);
-      return;
-    }
-
-    setUploadState(prev => ({ ...prev, [team]: { ...prev[team], loading: true, message: '', error: '' } }));
-
+  const handleExportJunctionLogs = async () => {
     try {
-      const formData = new FormData();
-      formData.append('file', state.file);
-      formData.append('team', team);
+      const toastId = toast.loading('Exporting Junction Visit Excel report...');
+      const params = new URLSearchParams();
+      if (filters.employee_id) params.append('employee_id', filters.employee_id);
+      if (filters.start_date) params.append('start_date', filters.start_date);
+      if (filters.end_date) params.append('end_date', filters.end_date);
+      if (!filters.start_date && !filters.end_date && filters.date) {
+        params.append('date', filters.date);
+      }
+      if (user?.category) {
+        params.append('category', user.category);
+      }
 
-      const res = await api.post('/admin/locations/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await api.get(`/admin/team/field/junctions/export?${params.toString()}`, {
+        responseType: 'blob',
       });
-
-      setUploadState(prev => ({
-        ...prev,
-        [team]: { ...prev[team], loading: false, message: res.data.message, file: null, error: '' }
-      }));
-      if (fileRefs[team]?.current) fileRefs[team].current.value = '';
-      toast.success(res.data.message);
-      // Refresh location list
-      fetchTeamLocations(team);
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.setAttribute('download', `junction_visit_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Junction Visit Excel report exported successfully!', { id: toastId });
     } catch (err) {
-      const errMsg = err.response?.data?.error || 'Upload failed';
-      setUploadState(prev => ({
-        ...prev,
-        [team]: { ...prev[team], loading: false, error: errMsg, message: '' }
-      }));
-      toast.error(errMsg);
+      console.error(err);
+      toast.error('Failed to export Junction Visit report.');
     }
   };
 
-  const handleDeleteLocation = async (team, locationId) => {
-    try {
-      await api.delete(`/admin/locations/${locationId}`);
-      toast.success('Location deleted');
-      fetchTeamLocations(team);
-    } catch (err) {
-      toast.error('Failed to delete location');
-    }
-  };
 
   const handleJunctionUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -255,7 +194,7 @@ const AdminDashboard = () => {
         fetchEmployees(),
         fetchAnnouncements()
       ]);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
@@ -628,7 +567,8 @@ const AdminDashboard = () => {
       { id: 'overview', label: 'Overview', icon: Home },
       { id: 'field', label: 'Field Team', icon: Wrench },
       { id: 'coc', label: 'COC Team', icon: Monitor },
-      { id: 'ccc', label: 'CCC Team', icon: Monitor }
+      { id: 'ccc', label: 'CCC Team', icon: Monitor },
+      { id: 'towing', label: 'Towing Team', icon: Wrench }
     ].map((tab) => {
       const IconComponent = tab.icon;
       return (
@@ -975,6 +915,14 @@ const AdminDashboard = () => {
               >
                 <Download className="h-5 w-5" />
                 <span>Export Attendance Report</span>
+              </button>
+
+              <button
+                onClick={handleExportJunctionLogs}
+                className="w-full bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-semibold flex items-center justify-center space-x-2 py-3 rounded-lg transition-colors shadow-sm"
+              >
+                <MapPin className="h-5 w-5 text-teal-600" />
+                <span>Export Junction Visit Logs (Excel)</span>
               </button>
               
               {!user?.category && (

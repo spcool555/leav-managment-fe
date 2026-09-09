@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from "../services/api";
 import { useNavigate } from 'react-router-dom';
-import { Clock, User, Camera, MapPin, Calendar, FileText } from 'lucide-react';
+import { Clock, Camera, MapPin, Calendar, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import LeaveRequestModal from './LeaveRequestModal';
 import EditLeaveModal from './EditLeaveModal';
 import LeaveHistory from './LeaveHistory';
 import toast from 'react-hot-toast';
-import { use } from 'react';
+
 
 const EmployeeDashboard = () => {
-  const { user, logout } = useAuth();
-  const [language, setLanguage] = useState("en");
+  const { user } = useAuth();
+  const [_language, setLanguage] = useState("en");
   const navigate = useNavigate();
   const [attendanceStatus, setAttendanceStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ const EmployeeDashboard = () => {
     try {
       const response = await api.get(`/attendance/status/${user.id}`);
       setAttendanceStatus(response.data);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to fetch attendance status');
     } finally {
       setLoading(false);
@@ -80,7 +80,7 @@ const EmployeeDashboard = () => {
     fetchLeaveStats();
     fetchLeaveHistory();
   };
-  const handleLanguageChange = async (e) => {
+  const _handleLanguageChange = async (e) => {
   const selectedLang = e.target.value;
   setLanguage(selectedLang);
 
@@ -90,7 +90,7 @@ const EmployeeDashboard = () => {
       language: selectedLang
     });
     toast.success('Language updated');
-  } catch (error) {
+  } catch (_error) {
     toast.error('Failed to update language');
   }
 };

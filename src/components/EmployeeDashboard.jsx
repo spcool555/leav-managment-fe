@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, User, Camera, MapPin, Calendar, FileText, ExternalLink, ShoppingBag } from 'lucide-react';
+import { Clock, Camera, MapPin, Calendar, FileText, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Header from './Header';
 import LeaveRequestModal from './LeaveRequestModal';
@@ -130,7 +130,6 @@ const EmployeeDashboard = () => {
   const [leaveStats, setLeaveStats] = useState(null);
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [leaveLoading, setLeaveLoading] = useState(false);
-  const [activeShift, setActiveShift] = useState(null);
   const [monthlyAttendance, setMonthlyAttendance] = useState([]);
   const [attendanceMonthLoading, setAttendanceMonthLoading] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
@@ -156,7 +155,7 @@ const EmployeeDashboard = () => {
     try {
       const response = await api.get(`/attendance/status/${user.id}`);
       setAttendanceStatus(response.data);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to fetch attendance status');
     } finally {
       setAttendanceLoading(false);
@@ -189,7 +188,7 @@ const EmployeeDashboard = () => {
     try {
       const res = await api.get(`/attendance/monthly/${user.id}`);
       setMonthlyAttendance(res.data);
-    } catch (err) {
+    } catch (_err) {
       toast.error("Failed to load monthly attendance");
     } finally {
       setAttendanceMonthLoading(false);
@@ -199,8 +198,7 @@ const EmployeeDashboard = () => {
   const fetchActiveShift = async () => {
     try {
       const employeeId = localStorage.getItem('employee_id');
-      const res = await api.get(`/attendance/active/${employeeId}`);
-      setActiveShift(res.data?.active ? res.data : null);
+      await api.get(`/attendance/active/${employeeId}`);
     } catch (err) {
       console.error('Active shift error', err);
     }
@@ -209,7 +207,7 @@ const EmployeeDashboard = () => {
     try {
       const res = await api.get('/announcements');
       setAnnouncements(res.data);
-    } catch (err) {
+    } catch (_err) {
       console.error("Failed to fetch announcements");
     } finally {
       setAnnouncementLoading(false);

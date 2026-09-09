@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, XCircle, Clock, Filter, User, FileText, MessageSquare, Mail, Phone, Download, Eye, X, BarChart2 } from 'lucide-react';
 import api, { API_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ const LeaveManagement = ({ userCategory }) => {
       ]);
       setEmpHistoryLogs(Array.isArray(historyRes.data) ? historyRes.data : []);
       setEmpHistoryStats(statsRes.data);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to load employee leave history');
     } finally {
       setHistoryLoading(false);
@@ -59,7 +59,7 @@ const LeaveManagement = ({ userCategory }) => {
       if (userCategory) params.append('category', userCategory);
       const response = await api.get(`/admin/leaves?${params.toString()}`);
       setLeaves(response.data);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to fetch leave requests');
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, MapPin, RefreshCw, Send } from 'lucide-react';
 import Webcam from 'react-webcam';
@@ -38,7 +38,7 @@ const AttendanceForm = () => {
       const response = await api.get(`/attendance/status/${user.id}`);
       setAttendanceStatus(response.data);
       setIsCheckingIn(!response.data.checked_in);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to fetch attendance status');
     }
   };
@@ -54,7 +54,7 @@ const AttendanceForm = () => {
           console.log(`Location: ${location}`);
           setLocationLoading(false);
         },
-        (error) => {
+        (_error) => {
           toast.error('Failed to get location. Please enable location access.');
           setLocationLoading(false);
         }

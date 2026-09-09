@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Users, UserCheck, UserX, MapPinned, Eye, X, Upload, Download } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, UserCheck, UserX, MapPinned, MapPin, Eye, X, Upload, Download } from 'lucide-react';
 import GanttChart from './GanttChart';
+import FieldActivityTracker from './FieldActivityTracker';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -8,14 +9,15 @@ const TEAM_LABELS = {
   field: 'Field Team',
   coc: 'COC Team',
   ccc: 'CCC Team',
+  towing: 'Towing Team',
 };
 
 /**
  * TeamDashboard
  * -------------
  * Add-on component. AdminDashboard already renders <TeamDashboard team={activeTab} />
- * for the 'field' / 'coc' / 'ccc' tabs — this file supplies that component.
- * It shows the team roster with today's attendance, and (for Field & COC,
+ * for the 'field' / 'coc' / 'ccc' / 'towing' tabs — this file supplies that component.
+ * It shows the team roster with today's attendance, and (for Field, COC & Towing,
  * who move between junctions during the day) a log of before/after
  * junction-visit photos with captured GPS locations.
  */
@@ -47,6 +49,7 @@ const TeamDashboard = ({ team, userCategory }) => {
   };
 
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [subTab, setSubTab] = useState('activity_tracker');
   const [summary, setSummary] = useState(null);
   const [members, setMembers] = useState([]);
   const [junctions, setJunctions] = useState([]);
@@ -82,7 +85,7 @@ const TeamDashboard = ({ team, userCategory }) => {
         setJunctions(Array.isArray(results[2].data) ? results[2].data : []);
         setRemarks(Array.isArray(results[3].data) ? results[3].data : []);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error(`Failed to load ${TEAM_LABELS[team] || team} dashboard`);
     } finally {
       setLoading(false);
@@ -92,6 +95,11 @@ const TeamDashboard = ({ team, userCategory }) => {
   useEffect(() => {
     setJunctionCurrentPage(1);
     setRosterFilter('checked_in');
+    if (team === 'coc' || team === 'ccc') {
+      setSubTab('overview');
+    } else {
+      setSubTab('activity_tracker');
+    }
   }, [team, selectedDate]);
 
   const [rosterFilter, setRosterFilter] = useState('checked_in'); // 'all' | 'checked_in' | 'absent' | 'active_visits'
@@ -120,7 +128,7 @@ const TeamDashboard = ({ team, userCategory }) => {
   const [junctionStartDate, setJunctionStartDate] = useState('');
   const [junctionEndDate, setJunctionEndDate] = useState('');
 
-  const [remarksFilterEmp, setRemarksFilterEmp] = useState('');
+  const [_remarksFilterEmp, _setRemarksFilterEmp] = useState('');
   const [remarksStartDate, setRemarksStartDate] = useState('');
   const [remarksEndDate, setRemarksEndDate] = useState('');
 
@@ -135,7 +143,7 @@ const TeamDashboard = ({ team, userCategory }) => {
     setJunctionEndDate(endDate);
   };
 
-  const handleRemarksMonthChange = (e) => {
+  const _handleRemarksMonthChange = (e) => {
     const val = e.target.value;
     if (!val) return;
     const [year, month] = val.split('-').map(Number);
@@ -179,12 +187,12 @@ const TeamDashboard = ({ team, userCategory }) => {
     }
   };
 
-  const handleExportRemarksExcel = async () => {
+  const _handleExportRemarksExcel = async () => {
     try {
       const toastId = toast.loading('Exporting remarks log...');
       const params = new URLSearchParams();
       params.append('team', team);
-      if (remarksFilterEmp) params.append('employee_id', remarksFilterEmp);
+      if (_remarksFilterEmp) params.append('employee_id', _remarksFilterEmp);
       if (remarksStartDate) params.append('start_date', remarksStartDate);
       if (remarksEndDate) params.append('end_date', remarksEndDate);
       if (!remarksStartDate && !remarksEndDate && selectedDate) {
@@ -229,19 +237,19 @@ const TeamDashboard = ({ team, userCategory }) => {
       }
       const res = await api.get(`/admin/team/${team}/junctions?${params.toString()}`);
       setJunctions(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to filter junctions');
     } finally {
       setLoading(false);
     }
   };
 
-  const applyRemarksFilters = async () => {
+  const _applyRemarksFilters = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       params.append('team', team);
-      if (remarksFilterEmp) params.append('employee_id', remarksFilterEmp);
+      if (_remarksFilterEmp) params.append('employee_id', _remarksFilterEmp);
       if (remarksStartDate) params.append('start_date', remarksStartDate);
       if (remarksEndDate) params.append('end_date', remarksEndDate);
       if (!remarksStartDate && !remarksEndDate && selectedDate) {
@@ -252,7 +260,7 @@ const TeamDashboard = ({ team, userCategory }) => {
       }
       const res = await api.get(`/junction/remarks?${params.toString()}`);
       setRemarks(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to filter remarks');
     } finally {
       setLoading(false);
@@ -409,7 +417,7 @@ const TeamDashboard = ({ team, userCategory }) => {
               <span>Download Sample</span>
             </button>
 
-            {team === 'field' && (
+            {(team === 'field' || team === 'towing') && (
               <>
                 <input 
                   type="file" 
@@ -438,8 +446,40 @@ const TeamDashboard = ({ team, userCategory }) => {
         )}
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Sub-Tabs Switcher */}
+      {(team === 'field' || team === 'towing') && (
+        <div className="flex items-center space-x-3 bg-white p-1.5 rounded-2xl w-fit border border-gray-200 shadow-2xs">
+          <button
+            onClick={() => setSubTab('overview')}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all flex items-center space-x-2 ${
+              subTab === 'overview'
+                ? 'bg-[#0d7a5f] text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Team Overview & Attendance</span>
+          </button>
+          <button
+            onClick={() => setSubTab('activity_tracker')}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all flex items-center space-x-2 ${
+              subTab === 'activity_tracker'
+                ? 'bg-[#0d7a5f] text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            <span>📍 {team === 'towing' ? 'Live Location Map' : 'Field Activity Tracker'}</span>
+          </button>
+        </div>
+      )}
+
+      {subTab === 'activity_tracker' && (team === 'field' || team === 'towing') ? (
+        <FieldActivityTracker team={team} userCategory={userCategory} />
+      ) : (
+        <>
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div 
           onClick={() => setRosterFilter('all')}
           className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
@@ -833,6 +873,8 @@ const TeamDashboard = ({ team, userCategory }) => {
 
 
         </div>
+      )}
+      </>
       )}
 
       {/* Image modal */}

@@ -34,7 +34,7 @@ const AssignEmployeesModal = ({ team, locationId, currentEmployeeIds = [], onClo
           }
         );
         setEmployees(filtered);
-      } catch (err) {
+      } catch (_err) {
         toast.error('Failed to load employees');
       } finally {
         setLoading(false);

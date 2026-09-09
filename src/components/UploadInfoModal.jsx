@@ -1,5 +1,4 @@
-import React from 'react';
-import { X, FileSpreadsheet, Download, Info, CheckCircle } from 'lucide-react';
+import { X, Download, Info, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 
 /**

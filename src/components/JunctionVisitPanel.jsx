@@ -3,6 +3,8 @@ import { MapPin, Camera, CheckCircle2, PlayCircle, RefreshCw, Clock, Navigation 
 import Webcam from 'react-webcam';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { startLocationTracking, stopLocationTracking } from '../utils/locationTracker';
+
 
 // ─── Team-specific display config ───────────────────────────────────────────
 const TEAM_CONFIG = {
@@ -150,6 +152,26 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [nowTime, setNowTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatLiveDuration = (startedAtStr) => {
+    if (!startedAtStr) return 'Active';
+    const start = new Date(startedAtStr).getTime();
+    if (isNaN(start)) return 'Active';
+    const diffSecs = Math.max(0, Math.floor((nowTime - start) / 1000));
+    const hrs = Math.floor(diffSecs / 3600);
+    const mins = Math.floor((diffSecs % 3600) / 60);
+    const secs = diffSecs % 60;
+    if (hrs > 0) {
+      return `${hrs}h ${mins}m ${secs}s`;
+    }
+    return `${mins}m ${secs}s`;
+  };
 
   const webcamRef = useRef(null);
 
@@ -263,16 +285,20 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
     setR3Zone('');
   };
 
-  // Fetch employee team
+  // Fetch employee team & start background location tracking
   useEffect(() => {
     if (user) {
       const userTeam = (user.team || "").toLowerCase();
       setTeam(ALLOWED_TEAMS.includes(userTeam) ? userTeam : 'field');
+      if (user.id) {
+        startLocationTracking(user.id);
+      }
     } else {
       setTeam('field');
     }
     setTeamLoading(false);
   }, [user]);
+
 
   const fetchTodayVisits = useCallback(async () => {
     if (!user?.id) return;
@@ -1021,9 +1047,21 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                           {v.junction_name} 
                           {v.visit_type && <span className="text-xs font-normal ml-2 bg-white px-2 py-0.5 rounded shadow-sm text-gray-600">{v.visit_type}</span>}
                         </div>
-                        <div className={`text-xs mt-1 ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
-                          Start: {v.started_at ? new Date(v.started_at).toLocaleString() : '—'}
-                          {v.completed_at ? ` • End: ${new Date(v.completed_at).toLocaleString()}` : ''}
+                        <div className={`text-xs mt-1.5 space-y-1 ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-600'}`}>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span>🕒 <strong>Arrival:</strong> {v.started_at ? new Date(v.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                            <span>🏁 <strong>Completion:</strong> {v.completed_at ? new Date(v.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (v.status === 'in_progress' ? 'In Progress' : '—')}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                            <span className={`font-medium px-2 py-0.5 rounded text-[11px] ${v.status === 'in_progress' ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold animate-pulse' : 'bg-blue-100 text-blue-800'}`}>
+                              ⏱️ Time Spent: {v.status === 'in_progress' ? `Active (${formatLiveDuration(v.started_at)})` : (v.time_spent_minutes ? `${v.time_spent_minutes} mins` : (v.completed_at && v.started_at ? `${Math.round((new Date(v.completed_at) - new Date(v.started_at)) / 60000)} mins` : '—'))}
+                            </span>
+                            {Boolean(v.travel_time_minutes) && (
+                              <span className="bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded text-[11px]">
+                                🚗 Travel Time: {v.travel_time_minutes} mins
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {(v.ward || v.zone) && (
                           <div className="text-xs text-gray-500 mt-1">
@@ -1032,6 +1070,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                             {v.zone && <span>Zone: <span className="font-semibold text-gray-700">{v.zone}</span></span>}
                           </div>
                         )}
+
                         {(v.asset_type || v.fault_type) && (
                           <div className="text-xs text-gray-600 mt-1 bg-white p-2 rounded border border-gray-100">
                             {v.asset_type && <span>Asset: <span className="font-semibold text-gray-800">{v.asset_type}</span></span>}

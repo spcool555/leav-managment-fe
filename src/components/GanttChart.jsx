@@ -275,7 +275,7 @@ const GanttChart = ({ junctions = [] }) => {
                   </tr>
 
                   {/* Task Rows (Visits) */}
-                  {group.visits.map((visit, visitIdx) => {
+                  {group.visits.map((visit, _visitIdx) => {
                     const isCompleted = visit.status === 'completed';
                     const progressStr = isCompleted ? '100%' : '50%';
                     const progressColor = isCompleted ? 'bg-blue-600 text-white' : 'bg-blue-400 text-white';

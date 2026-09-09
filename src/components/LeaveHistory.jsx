@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -19,15 +19,7 @@ const Header = ({
   const navigate = useNavigate();
 
   // ✅ STATES
-  const [language, setLanguage] = useState('en');
   const [showLangDropdown, setShowLangDropdown] = useState(false);
-
-  // ✅ LOAD SAVED LANGUAGE
-  useEffect(() => {
-    if (user?.preferred_language) {
-      setLanguage(user.preferred_language);
-    }
-  }, [user]);
 
   // ✅ HANDLERS
   const handleBack = () => navigate(backPath);
@@ -37,7 +29,6 @@ const Header = ({
   };
 
   const handleLanguageChange = async (lang) => {
-    setLanguage(lang);
     setShowLangDropdown(false);
 
     try {
@@ -46,7 +37,7 @@ const Header = ({
         language: lang
       });
       toast.success('Language updated');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update language');
     }
   };

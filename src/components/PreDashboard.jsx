@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarCheck, Building2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';

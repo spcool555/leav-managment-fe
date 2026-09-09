@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { User, Lock,Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LoginHeader from './LoginHeader';
@@ -13,7 +12,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({

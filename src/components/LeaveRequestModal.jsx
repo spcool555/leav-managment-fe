@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Calendar, FileText, Upload, File } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
