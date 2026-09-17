@@ -114,7 +114,7 @@ const Header = ({
               {/* ✅ INVENTORY BUTTON */}
               <div>
                 <button
-                  onClick={() => setShowIIMS(true)}
+                  onClick={() => window.open("http://31.97.224.19:5173/", "_blank")}
                   style={{ backgroundColor: '#97D3CD', color: '#0d4039' }}
                   className="flex items-center gap-2 hover:opacity-90 px-4 py-1.5 rounded-md text-sm font-bold shadow transition-opacity"
                 >
