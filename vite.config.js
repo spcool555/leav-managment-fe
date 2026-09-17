@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -25,8 +23,9 @@ export default defineConfig({
     allowedHosts: [
       'localhost',
       '127.0.0.1',
-      '.trycloudflare.com'
+      '.trycloudflare.com',
+      'dmmsl.in',
+      '31.97.224.19'
     ],
   },
 })
-
