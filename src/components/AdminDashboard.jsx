@@ -14,7 +14,11 @@ import {
   Home,
   Wrench,
   Monitor,
-  MapPin
+  Building,
+  MapPin,
+  Layers,
+  Users,
+  CheckCircle2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +36,34 @@ import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+
+  const userId = (user?.id || '').toLowerCase();
+  const userCat = (user?.category || '').toLowerCase();
+
+  const isSuperAdmin = userId === 'admin001' || (!userId.includes('admin') && user?.is_admin);
+  const isSmartCityAdmin = userId === 'smartcity_admin' || userCat === 'smart city';
+  const isIITMSAdmin = userId === 'iitms_admin' || userCat === 'iitms';
+  const isTowingAdmin = userId === 'towing_admin' || userCat === 'towing';
+
+  const defaultTab = isSmartCityAdmin && !isSuperAdmin
+    ? 'smartcity'
+    : isIITMSAdmin && !isSuperAdmin
+    ? 'iitms'
+    : isTowingAdmin && !isSuperAdmin
+    ? 'towing'
+    : 'overview';
+
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  useEffect(() => {
+    if (isSmartCityAdmin && !isSuperAdmin) {
+      setActiveTab('smartcity');
+    } else if (isIITMSAdmin && !isSuperAdmin) {
+      setActiveTab('iitms');
+    } else if (isTowingAdmin && !isSuperAdmin) {
+      setActiveTab('towing');
+    }
+  }, [user, isSuperAdmin, isSmartCityAdmin, isIITMSAdmin, isTowingAdmin]);
   const [stats, setStats] = useState({});
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -564,12 +595,12 @@ const AdminDashboard = () => {
   {/* Tabs */}
   <nav className="relative flex items-center overflow-x-auto">
     {[
-      { id: 'overview', label: 'Overview', icon: Home },
-      { id: 'field', label: 'Field Team', icon: Wrench },
-      { id: 'coc', label: 'COC Team', icon: Monitor },
-      { id: 'ccc', label: 'CCC Team', icon: Monitor },
-      { id: 'towing', label: 'Towing Team', icon: Wrench }
-    ].map((tab) => {
+      { id: 'overview', label: 'Overview', icon: Home, visible: isSuperAdmin },
+      { id: 'smartcity', label: 'Smart City', icon: Building, visible: isSuperAdmin || isSmartCityAdmin },
+      { id: 'iitms', label: 'IITMS', icon: Layers, visible: isSuperAdmin || isIITMSAdmin },
+      { id: 'towing', label: 'Towing Team', icon: Wrench, visible: isSuperAdmin || isTowingAdmin },
+      { id: 'headoffice', label: 'Head Office', icon: Building, visible: isSuperAdmin }
+    ].filter(tab => tab.visible).map((tab) => {
       const IconComponent = tab.icon;
       return (
         <button
@@ -626,31 +657,46 @@ const AdminDashboard = () => {
       {activeTab === 'overview' && (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-         <div
-          onClick={() => handleTopCardClick("present")}
-            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-6 w-full text-left hover:shadow-md cursor-pointer transition-all"
-            >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div
+            onClick={() => handleTopCardClick("all")}
+            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all"
+          >
             <div className="flex items-center">
-              <div className="bg-green-100 rounded-full p-3">
-                <UserCheck className="h-6 w-6 text-green-600" />
+              <div className="bg-blue-100 rounded-full p-3">
+                <Users className="h-6 w-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Present</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.present || 0}</p>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.total_employees || 0}</p>
               </div>
             </div>
           </div>
 
           <div
-          onClick={() => handleTopCardClick("late")}
-          className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-6 w-full text-left hover:shadow-md cursor-pointer transition-all"
+            onClick={() => handleTopCardClick("present")}
+            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all"
+          >
+            <div className="flex items-center">
+              <div className="bg-green-100 rounded-full p-3">
+                <UserCheck className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Ontime</p>
+                <p className="text-2xl font-semibold text-gray-900">{Math.max(0, (stats.present || 0) - (stats.late || 0))}</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => handleTopCardClick("late")}
+            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all"
           >
             <div className="flex items-center">
               <div className="bg-yellow-100 rounded-full p-3">
                 <Clock className="h-6 w-6 text-yellow-600" />
               </div>
-              <div className="ml-4">
+              <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Late</p>
                 <p className="text-2xl font-semibold text-gray-900">{stats.late || 0}</p>
               </div>
@@ -658,14 +704,14 @@ const AdminDashboard = () => {
           </div>
 
           <div
-          onClick={() => handleTopCardClick("half_day")}
-          className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-6 w-full text-left hover:shadow-md cursor-pointer transition-all"
+            onClick={() => handleTopCardClick("half_day")}
+            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all"
           >
             <div className="flex items-center">
               <div className="bg-orange-100 rounded-full p-3">
                 <AlertCircle className="h-6 w-6 text-orange-600" />
               </div>
-              <div className="ml-4">
+              <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Half Day</p>
                 <p className="text-2xl font-semibold text-gray-900">{(stats.half_day_first_half || 0) + (stats.half_day_second_half || 0)}</p>
               </div>
@@ -673,14 +719,14 @@ const AdminDashboard = () => {
           </div>
 
           <div
-          onClick={() => handleTopCardClick("absent")}
-          className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-6 w-full text-left hover:shadow-md cursor-pointer transition-all"
+            onClick={() => handleTopCardClick("absent")}
+            className="bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all"
           >
             <div className="flex items-center">
               <div className="bg-red-100 rounded-full p-3">
                 <UserX className="h-6 w-6 text-red-600" />
               </div>
-              <div className="ml-4">
+              <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Absent</p>
                 <p className="text-2xl font-semibold text-gray-900">{stats.absent || 0}</p>
               </div>
@@ -754,38 +800,6 @@ const AdminDashboard = () => {
         Total staff
       </span>
     </div>
-  </div>
-
-  {/* Legend */}
-  <div className="space-y-1 relative z-10">
-    {pieChartData
-      .filter(item => item.name === 'Present' || item.name === 'Absent')
-      .map((item) => {
-        const index = pieChartData.findIndex(
-          x => x.name === item.name
-        );
-
-        return (
-          <div
-            key={item.name}
-            className="flex items-center justify-between px-2 py-1 border-b border-dashed border-gray-100 last:border-0"
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: COLORS[index] }}
-              />
-              <span className="text-xs text-gray-600">
-                {item.name}
-              </span>
-            </div>
-
-            <span className="text-xs font-medium text-gray-700">
-              {item.value}
-            </span>
-          </div>
-        );
-      })}
   </div>
 
   {/* Bottom green decoration */}
@@ -899,15 +913,13 @@ const AdminDashboard = () => {
             </div>
             
             <div className="space-y-4">
-              {!user?.category && (
-                <button
-                  onClick={() => setShowCreateEmployee(true)}
-                  className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>Add New Employee</span>
-                </button>
-              )}
+              <button
+                onClick={() => setShowCreateEmployee(true)}
+                className="w-full btn-primary flex items-center justify-center space-x-2 py-3"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Add New Employee</span>
+              </button>
               
               <button
                 onClick={exportToExcel}
@@ -925,7 +937,7 @@ const AdminDashboard = () => {
                 <span>Export Junction Visit Logs (Excel)</span>
               </button>
               
-              {!user?.category && (
+              {isSuperAdmin && (
                 <>
                   <button
                     onClick={handleDownloadEmployeeSample}
@@ -1209,19 +1221,35 @@ const AdminDashboard = () => {
                     >
                       Previous
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
-                          currentPage === page
-                            ? 'z-10 bg-green-50 border-green-500 text-green-700 font-semibold'
-                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {(() => {
+                      const maxVisiblePages = 10;
+                      let startPage = Math.max(1, currentPage - 4);
+                      let endPage = startPage + maxVisiblePages - 1;
+
+                      if (endPage > totalPages) {
+                        endPage = totalPages;
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+
+                      const pages = [];
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(i);
+                      }
+
+                      return pages.map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                            currentPage === page
+                              ? 'z-10 bg-green-50 border-green-500 text-green-700 font-semibold'
+                              : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ));
+                    })()}
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}

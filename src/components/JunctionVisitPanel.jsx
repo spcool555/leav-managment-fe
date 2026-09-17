@@ -53,9 +53,24 @@ const TEAM_CONFIG = {
     iconColor:     'text-green-600',
     iconBg:        'bg-green-100',
   },
+  towing: {
+    panelTitle:    'Log Junction Visit',
+    locationLabel: 'Junction / Site Name',
+    locationPlaceholder: 'Select or type junction name...',
+    datalistId:    'towing-locations-datalist',
+    beforeLabel:   'Before Photo',
+    afterLabel:    'After Photo',
+    uploadBefore:  'Upload Before Photo',
+    uploadAfter:   'Upload After Photo',
+    activeLabel:   'Active Work Location',
+    todayLabel:    "Today's Junctions",
+    emptyMsg:      'No junction visits logged yet today.',
+    iconColor:     'text-amber-600',
+    iconBg:        'bg-amber-100',
+  },
 };
 
-const ALLOWED_TEAMS = ['field', 'coc', 'ccc'];
+const ALLOWED_TEAMS = ['field', 'coc', 'ccc', 'towing'];
 
 const DEFAULT_FAULT_MAPPING = {
   'Fiber': [
@@ -117,7 +132,9 @@ const DEFAULT_FAULT_MAPPING = {
 };
 
 const JunctionVisitPanel = ({ user, attendanceStatus }) => {
+  const isIITMS = (user?.category || user?.project || '').toLowerCase().includes('iitms');
   const [team, setTeam] = useState(null);
+  const showSingleJunctionOnly = isIITMS;
   const [teamLoading, setTeamLoading] = useState(true);
   const [faultMapping, setFaultMapping] = useState(DEFAULT_FAULT_MAPPING);
 
@@ -318,14 +335,15 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
     fetchTodayVisits();
 
     const fetchTeam = (team && ALLOWED_TEAMS.includes(team)) ? team : 'field';
+    const userCat = user?.category || user?.project || 'Smart City';
 
-    // Fetch team-aware location list
-    api.get(`/locations?team=${fetchTeam}`)
+    // Fetch team and category-aware location list
+    api.get(`/locations?team=${fetchTeam}&category=${encodeURIComponent(userCat)}`)
       .then(res => {
         if (Array.isArray(res.data)) setLocationList(res.data);
       })
       .catch(err => console.error('Failed to fetch locations', err));
-  }, [team, fetchTodayVisits]);
+  }, [team, user, fetchTodayVisits]);
 
   // Fetch dynamic asset-fault mapping from backend
   useEffect(() => {
@@ -457,7 +475,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
       return;
     }
 
-    if (team === 'field' && (mode === 'starting' || mode === 'completing')) {
+    if ((team === 'field' || team === 'towing') && (mode === 'starting' || mode === 'completing')) {
       if (!selectedAsset) {
         toast.error('Asset Type is required');
         return;
@@ -500,7 +518,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
         formData.append('ward', finalWard);
         formData.append('zone', finalZone);
         formData.append('before_remark', remarkText.trim());
-        if (team === 'field') {
+        if (team === 'field' || team === 'towing') {
           formData.append('asset_type', selectedAsset);
           formData.append('fault_type', selectedFault);
         }
@@ -519,7 +537,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
         toast.success(res.data.message || 'Call visit started');
       } else if (mode === 'completing' && activeVisitId) {
         formData.append('remark', remarkText.trim());
-        if (team === 'field') {
+        if (team === 'field' || team === 'towing') {
           formData.append('asset_type', selectedAsset);
           formData.append('fault_type', selectedFault);
         }
@@ -664,7 +682,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                 </div>
 
                 {/* Asset and Fault Dropdowns on Complete */}
-                {mode === 'completing' && team === 'field' && (
+                {mode === 'completing' && (team === 'field' || team === 'towing') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left mt-4 mb-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -766,7 +784,7 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Select Location Option (Choose any of the 3 rows):
+                {showSingleJunctionOnly ? 'Select Junction:' : 'Select Location Option (Choose any of the 3 rows):'}
               </span>
               {(r1Junction || r2Ward || r3Zone) && (
                 <button
@@ -779,22 +797,21 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
               )}
             </div>
 
-            {/* Layout Box 1: Junction -> Ward -> Zone */}
-            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row1' && r1Junction ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
-                <span>Option 1: Select Junction (Auto-populates Ward & Zone)</span>
-                {activeRow === 'row1' && r1Junction && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {showSingleJunctionOnly ? (
+              /* Single Junction Input for IITMS and Towing employees (No Ward or Zone) */
+              <div className="p-4 rounded-xl border border-green-500 bg-green-50/40 shadow-sm">
+                <div className="text-xs font-semibold text-gray-700 mb-2">
+                  Select Junction
+                </div>
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Junction</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Junction / Site Name</label>
                   <input
                     type="text"
                     value={r1Junction}
                     onFocus={() => { setActiveRow('row1'); setShowJunctionDropdown(true); }}
                     onBlur={() => { setTimeout(() => setShowJunctionDropdown(false), 200); }}
                     onChange={(e) => { handleRow1JunctionChange(e.target.value); setShowJunctionDropdown(true); }}
-                    placeholder="Select or type junction..."
+                    placeholder="Select or type junction name..."
                     className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
                   />
                   {showJunctionDropdown && filteredJunctions.length > 0 && (
@@ -806,216 +823,254 @@ const JunctionVisitPanel = ({ user, attendanceStatus }) => {
                           className="px-4 py-3 hover:bg-green-50/80 cursor-pointer transition-colors"
                         >
                           <div className="text-sm font-semibold text-gray-800 break-words">{loc.name}</div>
-                          {(loc.ward || loc.zone) && (
-                            <div className="text-xs text-gray-500 flex flex-wrap items-center gap-1.5 mt-1">
-                              {loc.ward && <span className="bg-green-100/90 text-green-850 px-2 py-0.5 rounded text-[11px] font-medium">Ward: {loc.ward}</span>}
-                              {loc.zone && <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px]">Zone: {loc.zone}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* 3-Row Location Selector for Smart City Employees */
+              <>
+                {/* Layout Box 1: Junction -> Ward -> Zone */}
+                <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row1' && r1Junction ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                    <span>Option 1: Select Junction (Auto-populates Ward & Zone)</span>
+                    {activeRow === 'row1' && r1Junction && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Junction</label>
+                      <input
+                        type="text"
+                        value={r1Junction}
+                        onFocus={() => { setActiveRow('row1'); setShowJunctionDropdown(true); }}
+                        onBlur={() => { setTimeout(() => setShowJunctionDropdown(false), 200); }}
+                        onChange={(e) => { handleRow1JunctionChange(e.target.value); setShowJunctionDropdown(true); }}
+                        placeholder="Select or type junction..."
+                        className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                      />
+                      {showJunctionDropdown && filteredJunctions.length > 0 && (
+                        <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                          {filteredJunctions.map((loc) => (
+                            <div
+                              key={loc.id || loc.name}
+                              onMouseDown={(e) => { e.preventDefault(); handleRow1JunctionChange(loc.name); setShowJunctionDropdown(false); }}
+                              className="px-4 py-3 hover:bg-green-50/80 cursor-pointer transition-colors"
+                            >
+                              <div className="text-sm font-semibold text-gray-800 break-words">{loc.name}</div>
+                              {(loc.ward || loc.zone) && (
+                                <div className="text-xs text-gray-500 flex flex-wrap items-center gap-1.5 mt-1">
+                                  {loc.ward && <span className="bg-green-100/90 text-green-850 px-2 py-0.5 rounded text-[11px] font-medium">Ward: {loc.ward}</span>}
+                                  {loc.zone && <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px]">Zone: {loc.zone}</span>}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ward</label>
+                      <input
+                        type="text"
+                        value={r1Ward}
+                        placeholder="Auto-populated ward..."
+                        readOnly
+                        className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                      />
+                    </div>
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                      <input
+                        type="text"
+                        value={r1Zone}
+                        placeholder="Auto-populated zone..."
+                        readOnly
+                        className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ward</label>
-                  <input
-                    type="text"
-                    value={r1Ward}
-                    placeholder="Auto-populated ward..."
-                    readOnly
-                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
-                  />
-                </div>
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    value={r1Zone}
-                    placeholder="Auto-populated zone..."
-                    readOnly
-                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Layout Box 2: Ward -> Zone */}
-            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row2' && r2Ward ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
-                <span>Option 2: Select Ward (Auto-fetches Zone)</span>
-                {activeRow === 'row2' && r2Ward && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ward
-                  </label>
-                  <input
-                    type="text"
-                    value={r2Ward}
-                    onFocus={() => {
-                      setActiveRow('row2');
-                      setShowWardDropdown(true);
-                    }}
-                    onBlur={() => {
-                      setTimeout(() => setShowWardDropdown(false), 200);
-                    }}
-                    onChange={(e) => {
-                      handleRow2WardChange(e.target.value);
-                      setShowWardDropdown(true);
-                    }}
-                    placeholder="Select or type ward..."
-                    className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-                  />
-                  {showWardDropdown && filteredWards.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
-                      {filteredWards.map((w) => (
-                        <div
-                          key={w}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleRow2WardChange(w);
-                            setShowWardDropdown(false);
-                          }}
-                          className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
-                        >
-                          {w}
+                {/* Layout Box 2: Ward -> Zone */}
+                <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row2' && r2Ward ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                    <span>Option 2: Select Ward (Auto-fetches Zone)</span>
+                    {activeRow === 'row2' && r2Ward && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ward
+                      </label>
+                      <input
+                        type="text"
+                        value={r2Ward}
+                        onFocus={() => {
+                          setActiveRow('row2');
+                          setShowWardDropdown(true);
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => setShowWardDropdown(false), 200);
+                        }}
+                        onChange={(e) => {
+                          handleRow2WardChange(e.target.value);
+                          setShowWardDropdown(true);
+                        }}
+                        placeholder="Select or type ward..."
+                        className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                      />
+                      {showWardDropdown && filteredWards.length > 0 && (
+                        <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                          {filteredWards.map((w) => (
+                            <div
+                              key={w}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleRow2WardChange(w);
+                                setShowWardDropdown(false);
+                              }}
+                              className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
+                            >
+                              {w}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        zone
+                      </label>
+                      <input
+                        type="text"
+                        value={r2Zone}
+                        placeholder="Auto-populated zone..."
+                        readOnly
+                        className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Layout Box 3: Zone */}
+                <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row3' && r3Zone ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                  <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
+                    <span>Option 3: Select Zone</span>
+                    {activeRow === 'row3' && r3Zone && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        zone
+                      </label>
+                      <input
+                        type="text"
+                        value={r3Zone}
+                        onFocus={() => {
+                          setActiveRow('row3');
+                          setShowZoneDropdown(true);
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => setShowZoneDropdown(false), 200);
+                        }}
+                        onChange={(e) => {
+                          handleRow3ZoneChange(e.target.value);
+                          setShowZoneDropdown(true);
+                        }}
+                        placeholder="Select or type zone..."
+                        className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                      />
+                      {showZoneDropdown && filteredZones.length > 0 && (
+                        <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+                          {filteredZones.map((z) => (
+                            <div
+                              key={z}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleRow3ZoneChange(z);
+                                setShowZoneDropdown(false);
+                              }}
+                              className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
+                            >
+                              {z}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          
+          {(team === 'field' || team === 'towing') && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Visit Type
+                </label>
+                <select
+                  value={visitType}
+                  onChange={(e) => setVisitType(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="Regular Visit">Regular Visit</option>
+                  <option value="Down Call Visit">Down Call Visit</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Asset Type
+                  </label>
+                  <select
+                    value={selectedAsset}
+                    onChange={(e) => {
+                      setSelectedAsset(e.target.value);
+                      setSelectedFault('');
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">-- Select Asset Type --</option>
+                    {Object.keys(faultMapping).map((asset) => (
+                      <option key={asset} value={asset}>{asset}</option>
+                    ))}
+                  </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    zone
-                  </label>
-                  <input
-                    type="text"
-                    value={r2Zone}
-                    placeholder="Auto-populated zone..."
-                    readOnly
-                    className="w-full border border-gray-300 bg-gray-100 text-gray-600 font-semibold rounded-lg px-4 py-2.5 text-sm cursor-not-allowed focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Layout Box 3: Zone */}
-            <div className={`p-4 rounded-xl border transition-all ${activeRow === 'row3' && r3Zone ? 'border-green-500 bg-green-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-              <div className="text-xs font-semibold text-gray-700 flex items-center justify-between mb-2">
-                <span>Option 3: Select Zone</span>
-                {activeRow === 'row3' && r3Zone && <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded font-bold">Active Row</span>}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    zone
-                  </label>
-                  <input
-                    type="text"
-                    value={r3Zone}
-                    onFocus={() => {
-                      setActiveRow('row3');
-                      setShowZoneDropdown(true);
-                    }}
-                    onBlur={() => {
-                      setTimeout(() => setShowZoneDropdown(false), 200);
-                    }}
-                    onChange={(e) => {
-                      handleRow3ZoneChange(e.target.value);
-                      setShowZoneDropdown(true);
-                    }}
-                    placeholder="Select or type zone..."
-                    className="w-full border border-gray-300 bg-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-                  />
-                  {showZoneDropdown && filteredZones.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-80 overflow-y-auto divide-y divide-gray-100">
-                      {filteredZones.map((z) => (
-                        <div
-                          key={z}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleRow3ZoneChange(z);
-                            setShowZoneDropdown(false);
-                          }}
-                          className="px-4 py-2.5 hover:bg-green-50/80 cursor-pointer text-sm font-medium text-gray-800 transition-colors"
-                        >
-                          {z}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {team === 'field' && (
-              <div className="space-y-4">
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visit Type
+                    Fault Type
                   </label>
                   <select
-                    value={visitType}
-                    onChange={(e) => setVisitType(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    value={selectedFault}
+                    disabled={!selectedAsset}
+                    onChange={(e) => setSelectedFault(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="Regular Visit">Regular Visit</option>
-                    <option value="Down Call Visit">Down Call Visit</option>
+                    <option value="">-- Select Fault Type --</option>
+                    {selectedAsset && faultMapping[selectedAsset] && faultMapping[selectedAsset].map((fault) => (
+                      <option key={fault} value={fault}>{fault}</option>
+                    ))}
                   </select>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Asset Type
-                    </label>
-                    <select
-                      value={selectedAsset}
-                      onChange={(e) => {
-                        setSelectedAsset(e.target.value);
-                        setSelectedFault('');
-                      }}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    >
-                      <option value="">-- Select Asset Type --</option>
-                      {Object.keys(faultMapping).map((asset) => (
-                        <option key={asset} value={asset}>{asset}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fault Type
-                    </label>
-                    <select
-                      value={selectedFault}
-                      disabled={!selectedAsset}
-                      onChange={(e) => setSelectedFault(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    >
-                      <option value="">-- Select Fault Type --</option>
-                      {selectedAsset && faultMapping[selectedAsset] && faultMapping[selectedAsset].map((fault) => (
-                        <option key={fault} value={fault}>{fault}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <button
-              onClick={beginStart}
-              className={`w-full py-3 text-lg font-semibold text-white rounded-lg flex items-center justify-center space-x-2 transition-colors ${accentBtn}`}
-            >
-              <Camera className="h-5 w-5" />
-              <span>{cfg.uploadBefore}</span>
-            </button>
-          </div>
-        )}
+          <button
+            onClick={beginStart}
+            className={`w-full py-3 text-lg font-semibold text-white rounded-lg flex items-center justify-center space-x-2 transition-colors ${accentBtn}`}
+          >
+            <Camera className="h-5 w-5" />
+            <span>{cfg.uploadBefore}</span>
+          </button>
+        </div>
+      )}
 
         {/* Today's visits list */}
         <div className="mt-8 pt-6 border-t border-gray-200">

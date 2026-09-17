@@ -9,18 +9,20 @@ import api from '../services/api';
  *   onClose – dismiss handler
  */
 const UploadInfoModal = ({ team, onClose }) => {
-  const isField = team === 'field';
+  const isField = team === 'field' || team === 'towing';
 
   const teamLabel = {
-    field: '🔧 Field Team',
-    coc:   '🖥️ COC Team',
-    ccc:   '💻 CCC Team',
+    field:  '🔧 Field Team',
+    towing: '🚜 Towing Team',
+    coc:    '🖥️ COC Team',
+    ccc:    '💻 CCC Team',
   }[team] || team;
 
   const accentColor = {
-    field: 'bg-green-600',
-    coc:   'bg-purple-600',
-    ccc:   'bg-green-600',
+    field:  'bg-green-600',
+    towing: 'bg-amber-600',
+    coc:    'bg-purple-600',
+    ccc:    'bg-green-600',
   }[team] || 'bg-gray-600';
 
   const handleDownloadSample = async () => {

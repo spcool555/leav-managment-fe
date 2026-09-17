@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserCheck, UserX, MapPinned, MapPin, Eye, X, Upload, Download } from 'lucide-react';
+import { Users, UserCheck, UserX, MapPinned, MapPin, Eye, X, Upload, Download, Building, Layers, Wrench, Monitor, Clock, AlertCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import GanttChart from './GanttChart';
 import FieldActivityTracker from './FieldActivityTracker';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const TEAM_LABELS = {
   field: 'Field Team',
   coc: 'COC Team',
   ccc: 'CCC Team',
   towing: 'Towing Team',
+  headoffice: 'Head Office',
 };
 
 /**
@@ -22,6 +25,15 @@ const TEAM_LABELS = {
  * junction-visit photos with captured GPS locations.
  */
 const TeamDashboard = ({ team, userCategory }) => {
+  const { user } = useAuth();
+  const userId = (user?.id || '').toLowerCase();
+  const isSuperAdmin = userId === 'admin001' || (!userId.includes('admin') && user?.is_admin);
+
+  const isProjectTab = team === 'smartcity' || team === 'iitms';
+  const projectFromTab = team === 'smartcity' ? 'Smart City' : team === 'iitms' ? 'IITMS' : null;
+
+  const [selectedTeam, setSelectedTeam] = useState('field');
+
   const getLocalDateString = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset();
@@ -49,7 +61,8 @@ const TeamDashboard = ({ team, userCategory }) => {
   };
 
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
-  const [subTab, setSubTab] = useState('activity_tracker');
+  const [selectedProject, setSelectedProject] = useState(projectFromTab || 'Smart City');
+  const [subTab, setSubTab] = useState('overview');
   const [summary, setSummary] = useState(null);
   const [members, setMembers] = useState([]);
   const [junctions, setJunctions] = useState([]);
@@ -59,50 +72,68 @@ const TeamDashboard = ({ team, userCategory }) => {
   const [junctionCurrentPage, setJunctionCurrentPage] = useState(1);
   const junctionsPerPage = 10;
 
+  const activeTeam = isProjectTab ? selectedTeam : team;
+  const activeProject = isProjectTab ? (projectFromTab || 'Smart City') : (selectedProject || userCategory || 'Smart City');
+  const showsJunctions = activeTeam === 'field' || activeTeam === 'towing';
+
+  useEffect(() => {
+    if (team === 'smartcity') {
+      setSelectedProject('Smart City');
+      setSelectedTeam('field');
+    } else if (team === 'iitms') {
+      setSelectedProject('IITMS');
+      setSelectedTeam('field');
+    }
+  }, [team]);
+
   useEffect(() => {
     setJunctionCurrentPage(1);
-  }, [team, selectedDate]);
-
-  const showsJunctions = team === 'field';
+  }, [activeTeam, selectedDate, activeProject]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const categoryParam = userCategory ? `&category=${encodeURIComponent(userCategory)}` : '';
+      const projectParam = `&project=${encodeURIComponent(activeProject)}&category=${encodeURIComponent(activeProject)}`;
       const calls = [
-        api.get(`/admin/team/${team}/summary?date=${selectedDate}${categoryParam}`),
-        api.get(`/admin/team/${team}/employees?date=${selectedDate}${categoryParam}`),
+        api.get(`/admin/team/${activeTeam}/summary?date=${selectedDate}${projectParam}`),
+        api.get(`/admin/team/${activeTeam}/employees?date=${selectedDate}${projectParam}`),
       ];
       if (showsJunctions) {
-        calls.push(api.get(`/admin/team/${team}/junctions?date=${selectedDate}${categoryParam}`));
-        calls.push(api.get(`/junction/remarks?team=${team}&date=${selectedDate}${categoryParam}`));
+        calls.push(api.get(`/admin/team/${activeTeam}/junctions?date=${selectedDate}${projectParam}`));
+        calls.push(api.get(`/junction/remarks?team=${activeTeam}&date=${selectedDate}${projectParam}`));
       }
 
       const results = await Promise.all(calls);
       setSummary(results[0].data);
-      setMembers(Array.isArray(results[1].data) ? results[1].data : []);
+      const rawMembers = Array.isArray(results[1].data) ? results[1].data : [];
+      const filteredByProj = rawMembers.filter(m => {
+        const catStr = (m.project || m.category || '').toLowerCase();
+        if (activeProject === 'IITMS') {
+          return catStr.includes('iitms');
+        } else if (activeProject === 'Smart City') {
+          return !catStr.includes('iitms');
+        }
+        return true;
+      });
+      setMembers(filteredByProj);
       if (showsJunctions) {
         setJunctions(Array.isArray(results[2].data) ? results[2].data : []);
         setRemarks(Array.isArray(results[3].data) ? results[3].data : []);
       }
     } catch (_error) {
-      toast.error(`Failed to load ${TEAM_LABELS[team] || team} dashboard`);
+      toast.error(`Failed to load ${TEAM_LABELS[activeTeam] || activeTeam} dashboard`);
     } finally {
       setLoading(false);
     }
-  }, [team, showsJunctions, selectedDate, userCategory]);
+  }, [activeTeam, showsJunctions, selectedDate, activeProject]);
 
   useEffect(() => {
     setJunctionCurrentPage(1);
-    setRosterFilter('checked_in');
-    if (team === 'coc' || team === 'ccc') {
-      setSubTab('overview');
-    } else {
-      setSubTab('activity_tracker');
-    }
-  }, [team, selectedDate]);
+    setRosterFilter('all');
+    setSubTab('overview');
+  }, [activeTeam, selectedDate, activeProject]);
 
-  const [rosterFilter, setRosterFilter] = useState('checked_in'); // 'all' | 'checked_in' | 'absent' | 'active_visits'
+  const [rosterFilter, setRosterFilter] = useState('all'); // 'all' | 'checked_in' | 'absent' | 'active_visits'
 
   const filteredMembers = React.useMemo(() => {
     if (rosterFilter === 'checked_in') {
@@ -164,11 +195,12 @@ const TeamDashboard = ({ team, userCategory }) => {
       if (!junctionStartDate && !junctionEndDate && selectedDate) {
         params.append('date', selectedDate);
       }
-      if (userCategory) {
-        params.append('category', userCategory);
+      const cat = activeProject || userCategory;
+      if (cat) {
+        params.append('category', cat);
       }
 
-      const response = await api.get(`/admin/team/${team}/junctions/export?${params.toString()}`, {
+      const response = await api.get(`/admin/team/${activeTeam}/junctions/export?${params.toString()}`, {
         responseType: 'blob',
       });
       const blob = new Blob([response.data], {
@@ -176,7 +208,7 @@ const TeamDashboard = ({ team, userCategory }) => {
       });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `descriptive_log_${team}_${selectedDate}.xlsx`);
+      link.setAttribute('download', `descriptive_log_${activeTeam}_${selectedDate}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -191,15 +223,16 @@ const TeamDashboard = ({ team, userCategory }) => {
     try {
       const toastId = toast.loading('Exporting remarks log...');
       const params = new URLSearchParams();
-      params.append('team', team);
+      params.append('team', activeTeam);
       if (_remarksFilterEmp) params.append('employee_id', _remarksFilterEmp);
       if (remarksStartDate) params.append('start_date', remarksStartDate);
       if (remarksEndDate) params.append('end_date', remarksEndDate);
       if (!remarksStartDate && !remarksEndDate && selectedDate) {
         params.append('date', selectedDate);
       }
-      if (userCategory) {
-        params.append('category', userCategory);
+      const cat = activeProject || userCategory;
+      if (cat) {
+        params.append('category', cat);
       }
 
       const response = await api.get(`/admin/remarks/export?${params.toString()}`, {
@@ -210,7 +243,7 @@ const TeamDashboard = ({ team, userCategory }) => {
       });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `remarks_log_${team}_${selectedDate}.xlsx`);
+      link.setAttribute('download', `remarks_log_${activeTeam}_${selectedDate}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -232,10 +265,11 @@ const TeamDashboard = ({ team, userCategory }) => {
       if (!junctionStartDate && !junctionEndDate && selectedDate) {
         params.append('date', selectedDate);
       }
-      if (userCategory) {
-        params.append('category', userCategory);
+      const cat = activeProject || userCategory;
+      if (cat) {
+        params.append('category', cat);
       }
-      const res = await api.get(`/admin/team/${team}/junctions?${params.toString()}`);
+      const res = await api.get(`/admin/team/${activeTeam}/junctions?${params.toString()}`);
       setJunctions(Array.isArray(res.data) ? res.data : []);
     } catch (_err) {
       toast.error('Failed to filter junctions');
@@ -248,15 +282,16 @@ const TeamDashboard = ({ team, userCategory }) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append('team', team);
+      params.append('team', activeTeam);
       if (_remarksFilterEmp) params.append('employee_id', _remarksFilterEmp);
       if (remarksStartDate) params.append('start_date', remarksStartDate);
       if (remarksEndDate) params.append('end_date', remarksEndDate);
       if (!remarksStartDate && !remarksEndDate && selectedDate) {
         params.append('date', selectedDate);
       }
-      if (userCategory) {
-        params.append('category', userCategory);
+      const cat = activeProject || userCategory;
+      if (cat) {
+        params.append('category', cat);
       }
       const res = await api.get(`/junction/remarks?${params.toString()}`);
       setRemarks(Array.isArray(res.data) ? res.data : []);
@@ -347,12 +382,14 @@ const TeamDashboard = ({ team, userCategory }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const toastId = toast.loading('Uploading junctions...');
+    const toastId = toast.loading(`Uploading ${activeProject} junctions...`);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('category', activeProject);
+    formData.append('project', activeProject);
 
     try {
-      const res = await api.post('/admin/junctions/upload', formData, {
+      const res = await api.post(`/admin/junctions/upload?category=${encodeURIComponent(activeProject)}&project=${encodeURIComponent(activeProject)}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(res.data.message || 'Upload successful', { id: toastId });
@@ -382,9 +419,13 @@ const TeamDashboard = ({ team, userCategory }) => {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">{TEAM_LABELS[team] || team}</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isProjectTab
+              ? `${activeProject} - ${TEAM_LABELS[activeTeam] || activeTeam}`
+              : (TEAM_LABELS[activeTeam] || activeTeam)}
+          </h2>
           <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm w-fit">
-            <span className="text-sm font-medium text-gray-500 font-semibold">Date:</span>
+            <span className="text-sm text-gray-500 font-semibold">Date:</span>
             <input
               type="date"
               value={selectedDate}
@@ -393,7 +434,7 @@ const TeamDashboard = ({ team, userCategory }) => {
             />
           </div>
         </div>
-        {showsJunctions && !userCategory && (
+        {showsJunctions && isSuperAdmin && (
           <div className="flex items-center space-x-3">
             <input 
               type="file" 
@@ -407,7 +448,11 @@ const TeamDashboard = ({ team, userCategory }) => {
               className="btn-primary flex items-center justify-center space-x-2 px-4 py-2 cursor-pointer bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm font-medium text-sm transition-colors"
             >
               <Upload className="h-4 w-4" />
-              <span>Upload Junctions, Wards & Zones (Excel)</span>
+              <span>
+                {activeProject === 'IITMS'
+                  ? 'Upload IITMS Junctions (Excel)'
+                  : 'Upload Smart City Junctions, Wards & Zones (Excel)'}
+              </span>
             </label>
             <button
               onClick={handleDownloadJunctionSample}
@@ -417,7 +462,7 @@ const TeamDashboard = ({ team, userCategory }) => {
               <span>Download Sample</span>
             </button>
 
-            {(team === 'field' || team === 'towing') && (
+            {(activeTeam === 'field' || activeTeam === 'towing') && (
               <>
                 <input 
                   type="file" 
@@ -446,8 +491,95 @@ const TeamDashboard = ({ team, userCategory }) => {
         )}
       </div>
 
+      {/* Selection Boxes */}
+      {isProjectTab && (
+        /* Inside Smart City / IITMS: render 3 Team Selection Boxes side-by-side */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-teal-100 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setSelectedTeam('field')}
+            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
+              activeTeam === 'field'
+                ? 'bg-teal-700 text-white border-teal-800 shadow-md scale-[1.01]'
+                : 'bg-teal-50/40 text-gray-800 border-teal-200 hover:bg-teal-100/60'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-lg ${activeTeam === 'field' ? 'bg-white/20 text-white' : 'bg-teal-200 text-teal-900'}`}>
+                <Wrench className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg leading-tight">Field Team</h3>
+                <p className={`text-xs ${activeTeam === 'field' ? 'text-teal-100' : 'text-gray-500'}`}>
+                  Field Team Employees
+                </p>
+              </div>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              activeTeam === 'field' ? 'bg-white text-teal-900' : 'bg-teal-200 text-teal-900'
+            }`}>
+              {activeTeam === 'field' ? '✓ Active' : 'Select'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTeam('coc')}
+            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
+              activeTeam === 'coc'
+                ? 'bg-teal-700 text-white border-teal-800 shadow-md scale-[1.01]'
+                : 'bg-teal-50/40 text-gray-800 border-teal-200 hover:bg-teal-100/60'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-lg ${activeTeam === 'coc' ? 'bg-white/20 text-white' : 'bg-teal-200 text-teal-900'}`}>
+                <Monitor className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg leading-tight">COC Team</h3>
+                <p className={`text-xs ${activeTeam === 'coc' ? 'text-teal-100' : 'text-gray-500'}`}>
+                  COC Team Employees
+                </p>
+              </div>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              activeTeam === 'coc' ? 'bg-white text-teal-900' : 'bg-teal-200 text-teal-900'
+            }`}>
+              {activeTeam === 'coc' ? '✓ Active' : 'Select'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedTeam('ccc')}
+            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer text-left ${
+              activeTeam === 'ccc'
+                ? 'bg-teal-700 text-white border-teal-800 shadow-md scale-[1.01]'
+                : 'bg-teal-50/40 text-gray-800 border-teal-200 hover:bg-teal-100/60'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-3 rounded-lg ${activeTeam === 'ccc' ? 'bg-white/20 text-white' : 'bg-teal-200 text-teal-900'}`}>
+                <Monitor className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg leading-tight">CCC Team</h3>
+                <p className={`text-xs ${activeTeam === 'ccc' ? 'text-teal-100' : 'text-gray-500'}`}>
+                  CCC Team Employees
+                </p>
+              </div>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              activeTeam === 'ccc' ? 'bg-white text-teal-900' : 'bg-teal-200 text-teal-900'
+            }`}>
+              {activeTeam === 'ccc' ? '✓ Active' : 'Select'}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Sub-Tabs Switcher */}
-      {(team === 'field' || team === 'towing') && (
+      {activeTeam !== 'headoffice' && (
         <div className="flex items-center space-x-3 bg-white p-1.5 rounded-2xl w-fit border border-gray-200 shadow-2xs">
           <button
             onClick={() => setSubTab('overview')}
@@ -469,68 +601,144 @@ const TeamDashboard = ({ team, userCategory }) => {
             }`}
           >
             <MapPin className="w-4 h-4" />
-            <span>📍 {team === 'towing' ? 'Live Location Map' : 'Field Activity Tracker'}</span>
+            <span>📍 Live Location Map</span>
           </button>
         </div>
       )}
 
-      {subTab === 'activity_tracker' && (team === 'field' || team === 'towing') ? (
-        <FieldActivityTracker team={team} userCategory={userCategory} />
+      {subTab === 'activity_tracker' && activeTeam !== 'headoffice' ? (
+        <FieldActivityTracker team={activeTeam} userCategory={activeProject || userCategory} />
       ) : (
         <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div 
-          onClick={() => setRosterFilter('all')}
-          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
-            rosterFilter === 'all' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
-          }`}
-        >
-          <div className="p-3 rounded-full bg-primary-100"><Users className="h-5 w-5 text-primary-700" /></div>
-          <div>
-            <div className="text-xs text-gray-500 font-semibold">Total Members</div>
-            <div className="text-xl font-bold text-gray-900">{summary?.total_members ?? 0}</div>
-          </div>
-        </div>
-        <div 
-          onClick={() => setRosterFilter('checked_in')}
-          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
-            rosterFilter === 'checked_in' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
-          }`}
-        >
-          <div className="p-3 rounded-full bg-green-100"><UserCheck className="h-5 w-5 text-green-700" /></div>
-          <div>
-            <div className="text-xs text-gray-500 font-semibold">Checked In Today</div>
-            <div className="text-xl font-bold text-gray-900">{summary?.checked_in_today ?? 0}</div>
-          </div>
-        </div>
-        <div 
-          onClick={() => setRosterFilter('absent')}
-          className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
-            rosterFilter === 'absent' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
-          }`}
-        >
-          <div className="p-3 rounded-full bg-red-100"><UserX className="h-5 w-5 text-red-700" /></div>
-          <div>
-            <div className="text-xs text-gray-500 font-semibold">Absent Today</div>
-            <div className="text-xl font-bold text-gray-900">{summary?.absent_today ?? 0}</div>
-          </div>
-        </div>
-        {showsJunctions && (
-          <div 
-            onClick={() => setRosterFilter('active_visits')}
-            className={`md-card flex items-center gap-3 cursor-pointer hover:shadow transition-all ${
-              rosterFilter === 'active_visits' ? 'bg-gray-50/80 shadow border border-gray-200' : ''
-            }`}
-          >
-            <div className="p-3 rounded-full bg-amber-100"><MapPinned className="h-5 w-5 text-amber-700" /></div>
-            <div>
-              <div className="text-xs text-gray-500 font-semibold">Active Junction Visits</div>
-              <div className="text-xl font-bold text-gray-900">{summary?.active_junctions ?? 0}</div>
+          {/* 5 Summary Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div 
+              onClick={() => setRosterFilter('all')}
+              className={`bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all ${
+                rosterFilter === 'all' ? 'ring-2 ring-teal-500' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <div className="bg-blue-100 rounded-full p-3"><Users className="h-6 w-6 text-blue-600" /></div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                  <p className="text-2xl font-semibold text-gray-900">{summary?.total_members ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setRosterFilter('checked_in')}
+              className={`bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all ${
+                rosterFilter === 'checked_in' ? 'ring-2 ring-teal-500' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <div className="bg-green-100 rounded-full p-3"><UserCheck className="h-6 w-6 text-green-600" /></div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Ontime</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {summary?.ontime ?? Math.max(0, (summary?.checked_in_today ?? 0) - (summary?.late ?? 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setRosterFilter('checked_in')}
+              className={`bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all ${
+                rosterFilter === 'checked_in' ? 'ring-2 ring-teal-500' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <div className="bg-yellow-100 rounded-full p-3"><Clock className="h-6 w-6 text-yellow-600" /></div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Late</p>
+                  <p className="text-2xl font-semibold text-gray-900">{summary?.late ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setRosterFilter('checked_in')}
+              className={`bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all ${
+                rosterFilter === 'checked_in' ? 'ring-2 ring-teal-500' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <div className="bg-orange-100 rounded-full p-3"><AlertCircle className="h-6 w-6 text-orange-600" /></div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Half Day</p>
+                  <p className="text-2xl font-semibold text-gray-900">{summary?.half_day ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => setRosterFilter('absent')}
+              className={`bg-white rounded-2xl border border-[#dcebe3] shadow-sm p-5 w-full text-left hover:shadow-md cursor-pointer transition-all ${
+                rosterFilter === 'absent' ? 'ring-2 ring-teal-500' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <div className="bg-red-100 rounded-full p-3"><UserX className="h-6 w-6 text-red-600" /></div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-600">Absent</p>
+                  <p className="text-2xl font-semibold text-gray-900">{summary?.absent_today ?? 0}</p>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Today's Attendance Pie Chart (WITHOUT Announcements) */}
+          <div className="max-w-md w-full">
+            <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-5 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
+                    <span className="text-green-700 text-sm">▣</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Today&apos;s Attendance
+                  </h3>
+                </div>
+              </div>
+
+              <div className="relative h-48 w-full z-10">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Ontime', value: summary?.ontime ?? Math.max(0, (summary?.checked_in_today ?? 0) - (summary?.late ?? 0)) },
+                        { name: 'Late', value: summary?.late ?? 0 },
+                        { name: 'Half Day', value: summary?.half_day ?? 0 },
+                        { name: 'Absent', value: summary?.absent_today ?? 0 }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={43}
+                      outerRadius={62}
+                      dataKey="value"
+                    >
+                      {['#22c55e', '#eab308', '#f97316', '#ef4444'].map((color, index) => (
+                        <Cell key={`cell-${index}`} fill={color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-bold text-gray-900">
+                    {summary?.total_members ?? 0}
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    Total staff
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
       {/* Roster */}
       <div className="md-card overflow-x-auto">

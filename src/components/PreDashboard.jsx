@@ -3,8 +3,10 @@ import { CalendarCheck, Building2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 // URL of the external ERP application
-const ERP_URL = 'http://31.97.224.19:5173/';
-// const ERP_URL = 'http://localhost:5174/';
+const getErpUrl = () => {
+  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https:' : 'http:';
+  return `${protocol}//31.97.224.19:5173/`;
+};
 
 const PreDashboard = () => {
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const PreDashboard = () => {
 
   const handleErp = () => {
     // Open the external ERP application
-    window.location.href = ERP_URL;
+    window.location.href = getErpUrl();
   };
 
   return (

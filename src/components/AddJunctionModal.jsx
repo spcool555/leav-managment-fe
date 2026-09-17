@@ -21,18 +21,20 @@ const AddJunctionModal = ({ open, onClose, locationId, team }) => {
 
   if (!open) return null;
 
-  const isField = team === 'field';
+  const isField = team === 'field' || team === 'towing';
 
   const teamLabel = {
-    field: '🔧 Junction',
-    coc:   '🖥️ COC Location',
-    ccc:   '💻 CCC Location',
+    field:  '🔧 Junction',
+    towing: '🚜 Junction',
+    coc:    '🖥️ COC Location',
+    ccc:    '💻 CCC Location',
   }[team] || 'Location';
 
   const accentColor = {
-    field: 'bg-green-600',
-    coc:   'bg-purple-600',
-    ccc:   'bg-green-600',
+    field:  'bg-green-600',
+    towing: 'bg-amber-600',
+    coc:    'bg-purple-600',
+    ccc:    'bg-green-600',
   }[team] || 'bg-gray-600';
 
   const handleClose = () => {

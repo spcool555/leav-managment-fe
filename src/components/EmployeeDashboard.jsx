@@ -505,8 +505,22 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          {/* Junction Visits — add-on, shown only for Field Team / COC Team employees */}
-          {user.designation?.toLowerCase() === 'field team' && (
+          {/* Junction Visits — shown ONLY for Field team employees (Smart City & IITMS) */}
+          {(() => {
+            const t = (user?.team || '').toLowerCase();
+            const c = (user?.category || '').toLowerCase();
+            const d = (user?.designation || '').toLowerCase();
+            if (
+              t.includes('towing') || t.includes('coc') || t.includes('ccc') || t.includes('head') ||
+              c.includes('towing') || c.includes('head') ||
+              d.includes('towing') || d.includes('coc') || d.includes('ccc') || d.includes('head')
+            ) {
+              return false;
+            }
+            return (
+              t === 'field' || d.includes('field') || c.includes('smart city') || c.includes('iitms')
+            );
+          })() && (
             <JunctionVisitPanel user={user} attendanceStatus={attendanceStatus} />
           )}
 

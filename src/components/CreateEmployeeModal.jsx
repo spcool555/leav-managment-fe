@@ -253,6 +253,7 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
                 <option value="COC">COC</option>
                 <option value="CCC">CCC</option>
                 <option value="Towing">Towing</option>
+                <option value="Head Office">Head Office</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -262,10 +263,10 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
             </div>
           </div>
 
-          {/* Category */}
+          {/* Project / Category */}
           <div>
             <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category *
+              Project *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -274,12 +275,14 @@ const CreateEmployeeModal = ({ isOpen, onClose, onEmployeeCreated }) => {
               <select
                 id="category"
                 name="category"
-                value={formData.category}
-                onChange={handleChange}
+                value={formData.category || formData.project || 'Smart City'}
+                onChange={(e) => {
+                  handleChange(e);
+                  setFormData(prev => ({ ...prev, project: e.target.value, category: e.target.value }));
+                }}
                 className="input-field-with-icon appearance-none bg-white pr-10"
                 required
               >
-                <option value="">Select Category</option>
                 <option value="Smart City">Smart City</option>
                 <option value="IITMS">IITMS</option>
                 <option value="Towing">Towing</option>

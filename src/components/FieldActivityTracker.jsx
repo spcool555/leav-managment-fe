@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
+  Search,
   Calendar, 
   Clock, 
   MapPin, 
@@ -26,6 +27,7 @@ const FieldActivityTracker = ({ team = 'field', userCategory }) => {
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
   const [viewMode, setViewMode] = useState('weekly'); // 'daily' | 'weekly' | 'monthly'
   const [employeeFilter, setEmployeeFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [employeesList, setEmployeesList] = useState([]);
   const [trackerData, setTrackerData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,13 @@ const FieldActivityTracker = ({ team = 'field', userCategory }) => {
         const catParam = userCategory ? `?category=${encodeURIComponent(userCategory)}` : '';
         const res = await api.get(`/admin/team/${team}/employees${catParam}`);
         if (Array.isArray(res.data)) {
-          setEmployeesList(res.data);
+          const filtered = res.data.filter(emp => {
+            const catStr = (emp.project || emp.category || '').toLowerCase();
+            if (userCategory === 'IITMS') return catStr.includes('iitms');
+            if (userCategory === 'Smart City') return !catStr.includes('iitms');
+            return true;
+          });
+          setEmployeesList(filtered);
         }
       } catch (e) {
         console.error('Failed to fetch employees for tracker filter:', e);
@@ -303,12 +311,21 @@ const FieldActivityTracker = ({ team = 'field', userCategory }) => {
     }
   };
 
+  // Filter tracker data by searchQuery (name or ID)
+  const filteredTrackerData = trackerData.filter(emp => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const name = (emp.full_name || '').toLowerCase();
+    const id = (emp.employee_id || '').toLowerCase();
+    return name.includes(q) || id.includes(q);
+  });
+
   // Pagination Calculations
-  const totalEmployees = trackerData.length;
+  const totalEmployees = filteredTrackerData.length;
   const totalPages = Math.max(1, Math.ceil(totalEmployees / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalEmployees);
-  const paginatedData = trackerData.slice(startIndex, endIndex);
+  const paginatedData = filteredTrackerData.slice(startIndex, endIndex);
 
   return (
     <div className="space-y-6 bg-[#f4f9f7] p-4 md:p-6 rounded-2xl border border-[#d6e8e2] relative">
@@ -355,8 +372,8 @@ const FieldActivityTracker = ({ team = 'field', userCategory }) => {
           </button>
         </div>
 
-        {/* Date & Employee Selectors */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        {/* Date, Search & Employee Selectors */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
           
           {/* Select Week Date Picker */}
           <div>
@@ -387,7 +404,35 @@ const FieldActivityTracker = ({ team = 'field', userCategory }) => {
             </div>
           </div>
 
-          {/* Employee Filter */}
+          {/* Search Employee Field */}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+              SEARCH EMPLOYEE (NAME / ID)
+            </label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Type name or ID to search..."
+                className="w-full border border-gray-200 bg-white rounded-xl pl-9 pr-7 py-2.5 text-sm font-medium text-gray-800 focus:outline-none focus:border-[#0d7a5f]"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-gray-600 font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Employee Dropdown Filter */}
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
               EMPLOYEE FILTER

@@ -85,7 +85,7 @@ const EmployeeDashboard = () => {
   setLanguage(selectedLang);
 
   try {
-    await api.put('/api/user/language', {
+    await api.put('/user/language', {
       employee_id: user.id,
       language: selectedLang
     });
