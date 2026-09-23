@@ -385,7 +385,7 @@ const AdminDashboard = () => {
   // Prepare pie chart data
   // 👇 uske niche pieChartData
   const pieChartData = [
-    { name: 'Present', value: stats.present || 0 },
+    { name: 'Ontime', value: stats.present || 0 },
     { name: 'Late', value: stats.late || 0 },
     {
       name: 'Half Day',

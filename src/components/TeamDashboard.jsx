@@ -768,7 +768,13 @@ const TeamDashboard = ({ team, userCategory }) => {
                 <td className="py-2 pr-4">{m.full_name}</td>
                 <td className="py-2 pr-4 text-gray-600">{m.designation || '—'}</td>
                 <td className="py-2 pr-4">
-                  <span className={`md-chip ${m.checked_in_today ? 'md-chip-success' : 'md-chip-danger'}`}>
+                  <span className={`md-chip ${
+                    !m.checked_in_today || (m.status || '').toLowerCase() === 'absent'
+                      ? 'md-chip-danger'
+                      : (m.status || '').toLowerCase() === 'late' || (m.status || '').toLowerCase().includes('half')
+                      ? 'md-chip-warning'
+                      : 'md-chip-success'
+                  }`}>
                     {m.checked_in_today ? (m.status || 'present') : 'absent'}
                   </span>
                 </td>
