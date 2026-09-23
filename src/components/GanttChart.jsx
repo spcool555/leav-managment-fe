@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PALETTES = [
   {
@@ -90,6 +90,13 @@ const formatDate = (date) => {
 };
 
 const GanttChart = ({ junctions = [] }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [junctions]);
+
   if (!junctions || junctions.length === 0) {
     return (
       <div className="bg-white border border-[#dcebe3] rounded-2xl p-8 text-center text-gray-500 shadow-sm mb-6">
@@ -173,6 +180,12 @@ const GanttChart = ({ junctions = [] }) => {
   });
   const employeeGroups = Object.values(groups);
 
+  const totalItems = employeeGroups.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEmployeeGroups = employeeGroups.slice(startIndex, endIndex);
+
   // Helper to check if day falls in visit range
   const isDayInVisitRange = (day, visit) => {
     const d = new Date(day.getFullYear(), day.getMonth(), day.getDate());
@@ -250,8 +263,8 @@ const GanttChart = ({ junctions = [] }) => {
           </thead>
 
           <tbody>
-            {employeeGroups.map((group, groupIdx) => {
-              const theme = PALETTES[groupIdx % PALETTES.length];
+            {paginatedEmployeeGroups.map((group, groupIdx) => {
+              const theme = PALETTES[(startIndex + groupIdx) % PALETTES.length];
 
               return (
                 <React.Fragment key={group.employeeId}>
@@ -365,6 +378,67 @@ const GanttChart = ({ junctions = [] }) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of{' '}
+                <span className="font-medium">{totalItems}</span> employee teams
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                      currentPage === page
+                        ? 'z-10 bg-green-50 border-green-500 text-green-700 font-semibold'
+                        : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
