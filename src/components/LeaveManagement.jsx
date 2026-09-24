@@ -15,6 +15,12 @@ const LeaveManagement = ({ userCategory }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // Smaller page size for leave requests since cards are large
 
+  const [employees, setEmployees] = useState([]);
+  const [employeeIdFilter, setEmployeeIdFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyEmp, setHistoryEmp] = useState(null); // { id, name }
   const [empHistoryLogs, setEmpHistoryLogs] = useState([]);
@@ -49,14 +55,15 @@ const LeaveManagement = ({ userCategory }) => {
   useEffect(() => {
     setCurrentPage(1);
     fetchLeaves();
-  }, [filter, userCategory]);
+  }, [filter, userCategory, categoryFilter]);
 
   const fetchLeaves = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filter !== 'all') params.append('status', filter);
-      if (userCategory) params.append('category', userCategory);
+      const activeCat = categoryFilter || userCategory;
+      if (activeCat && activeCat !== 'all') params.append('category', activeCat);
       const response = await api.get(`/admin/leaves?${params.toString()}`);
       setLeaves(response.data);
     } catch (_error) {
@@ -120,11 +127,6 @@ const LeaveManagement = ({ userCategory }) => {
     return colors[type] || 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
-  const [employees, setEmployees] = useState([]);
-  const [employeeIdFilter, setEmployeeIdFilter] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
-
   useEffect(() => {
     fetchEmployeesList();
   }, []);
@@ -154,6 +156,8 @@ const LeaveManagement = ({ userCategory }) => {
       const toastId = toast.loading('Exporting leave report...');
       const params = new URLSearchParams();
       if (filter !== 'all') params.append('status', filter);
+      const activeCat = categoryFilter || userCategory;
+      if (activeCat && activeCat !== 'all') params.append('category', activeCat);
       if (employeeIdFilter) params.append('employee_id', employeeIdFilter);
       if (startDateFilter) params.append('start_date', startDateFilter);
       if (endDateFilter) params.append('end_date', endDateFilter);
@@ -247,6 +251,18 @@ const LeaveManagement = ({ userCategory }) => {
               {employees.map(emp => (
                 <option key={emp.id} value={emp.id}>{emp.id} - {emp.full_name}</option>
               ))}
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="input-field text-xs py-1.5 px-2 font-medium bg-white"
+            >
+              <option value="">All Categories / Projects</option>
+              <option value="Smart City">Smart City</option>
+              <option value="IITMS">IITMS</option>
+              <option value="Towing">Towing</option>
+              <option value="Head Office">Head Office</option>
             </select>
 
             <select

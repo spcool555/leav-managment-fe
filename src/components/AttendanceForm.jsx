@@ -229,7 +229,14 @@ const AttendanceForm = () => {
         disabled={(attendanceStatus?.used_shift_types || []).includes('general')}
       >
         General (9:30 AM – 6:00 PM)
+      </option> 
+     <option
+        value="general 2"
+        disabled={(attendanceStatus?.used_shift_types || []).includes('general 2')}
+      >
+        General 2 (10:30 AM – 7:00 PM)
       </option>
+
       <option
         value="morning"
         disabled={(attendanceStatus?.used_shift_types || []).includes('morning')}
