@@ -7,6 +7,7 @@ import AdminDashboard from './components/AdminDashboard';
 import PreDashboard from './components/PreDashboard';
 import AttendanceForm from './components/AttendanceForm';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Header from "./components/Header";
 
 // Protected Route Component
@@ -86,59 +87,60 @@ const RootRoute = () => {
 // App Routes Component (inside Router context)
 const AppRoutes = () => {
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        <Routes>
-          <Route path="/login" element={<LoginRoute />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute employeeOnly={true}>
-                <EmployeeDashboard />
-              </ProtectedRoute>
-            } 
+    <LanguageProvider>
+      <AuthProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Routes>
+            <Route path="/login" element={<LoginRoute />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute employeeOnly={true}>
+                  <EmployeeDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/attendance" 
+              element={
+                <ProtectedRoute employeeOnly={true}>
+                  <AttendanceForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route
+              path="/predashboard"
+              element={
+                <ProtectedRoute>
+                  <PreDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<RootRoute />} />
+          </Routes>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+            }}
           />
-          <Route 
-            path="/attendance" 
-            element={
-              <ProtectedRoute employeeOnly={true}>
-                <AttendanceForm />
-              </ProtectedRoute>
-            } 
-          />
-          <Route
-            path="/predashboard"
-            element={
-              <ProtectedRoute>
-                <PreDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly={true}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<RootRoute />} />
-        </Routes>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
-      </div>
-    </AuthProvider>
+        </div>
+      </AuthProvider>
+    </LanguageProvider>
   );
 };
-
 function App() {
   return (
     <Router basename="/adminpage" future={{ v7_relativeSplatPath: true }}>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, ArrowLeft, Globe, Monitor } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import logoImage from '../assets/KELTRON.png';
@@ -17,6 +18,7 @@ const Header = ({
 }) => {
 
   const { user, logout } = useAuth();
+  const { currentLanguage, changeLanguage } = useLanguage();
   const navigate = useNavigate();
 
   // ✅ STATES
@@ -30,18 +32,9 @@ const Header = ({
     navigate(user?.is_admin ? '/admin' : '/dashboard');
   };
 
-  const handleLanguageChange = async (lang) => {
+  const handleLanguageChange = (lang) => {
     setShowLangDropdown(false);
-
-    try {
-      await api.put('/user/language', {
-        employee_id: user.id,
-        language: lang
-      });
-      toast.success('Language updated');
-    } catch {
-      toast.error('Failed to update language');
-    }
+    changeLanguage(lang, user?.id);
   };
 
   return (
@@ -88,22 +81,22 @@ const Header = ({
                 </button>
 
                 {showLangDropdown && (
-                  <div className="absolute right-0 mt-2 w-24 bg-white border rounded-md shadow-md z-50">
+                  <div className="absolute right-0 mt-2 w-28 bg-white border rounded-md shadow-md z-50 py-1">
                     <button
                       onClick={() => handleLanguageChange('en')}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                      className={`block w-full text-left px-3 py-2 text-sm hover:bg-teal-50 ${currentLanguage === 'en' ? 'font-bold text-teal-700 bg-teal-50' : 'text-gray-700'}`}
                     >
                       ENGLISH
                     </button>
                     <button
                       onClick={() => handleLanguageChange('hi')}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                      className={`block w-full text-left px-3 py-2 text-sm hover:bg-teal-50 ${currentLanguage === 'hi' ? 'font-bold text-teal-700 bg-teal-50' : 'text-gray-700'}`}
                     >
                       HINDI
                     </button>
                     <button
                       onClick={() => handleLanguageChange('mr')}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                      className={`block w-full text-left px-3 py-2 text-sm hover:bg-teal-50 ${currentLanguage === 'mr' ? 'font-bold text-teal-700 bg-teal-50' : 'text-gray-700'}`}
                     >
                       MARATHI
                     </button>
@@ -125,7 +118,7 @@ const Header = ({
 
               {showUserInfo && (
                 <span className="text-sm text-gray-700">
-                 Welcome, <span className="font-bold">{user.full_name}</span>
+                Welcome, <span className="font-bold">{user.full_name}</span>
                 </span>
               )}
 
@@ -143,7 +136,7 @@ const Header = ({
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = '#ffffff';
-                   }}
+                  }}
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Logout</span>

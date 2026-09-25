@@ -1,7 +1,6 @@
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 * {
   margin: 0;
@@ -53,4 +52,38 @@ body {
 
 .card {
   @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+}
+
+/* Prevent Google Translate banner from pushing body/html down */
+html, body {
+  position: relative !important;
+  top: 0px !important;
+  margin-top: 0px !important;
+  padding-top: 0px !important;
+}
+
+/* Hide Google Translate top banner frame, gadget element, and popups */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+iframe[id*="goog"],
+.goog-te-balloon-frame,
+#goog-gt-tt,
+.VIpgJd-yDnbAf-BN21W-eL91vf,
+.VIpgJd-yDnbAf-bR138b-sfs10b {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#google_translate_element {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
